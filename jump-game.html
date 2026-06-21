@@ -469,6 +469,35 @@
   <small style="font-size:1rem;font-weight:400;color:var(--text-muted)">First-principles: from "how far can I go?" to the greedy one-pass solution</small>
 </h1>
 
+<!-- ============================================================ -->
+<div class="card" style="border-color: var(--accent);">
+  <h3 style="margin-top:0; color: var(--accent);">📋 Problem Statement</h3>
+  <p style="font-size:1.05rem;">You are given an integer array <code>nums</code>. You are initially positioned at the array's first index, and each element in the array represents your <strong>maximum jump length</strong> at that position.</p>
+  <p style="font-size:1.05rem;">Return <code style="color: var(--green);">true</code> if you can reach the last index, or <code style="color: var(--red);">false</code> otherwise.</p>
+
+  <h4 style="color: var(--text); margin-top: 1.2rem;">Example 1</h4>
+  <div class="code-block" style="font-size:0.85rem;">
+<span class="cm">Input:</span>  nums = [2, 3, 1, 1, 4]
+<span class="cm">Output:</span> <span class="kw">true</span>
+<span class="cm">Explanation:</span> Jump 1 step from index 0 to 1, then 3 steps to the last index.
+  </div>
+
+  <h4 style="color: var(--text); margin-top: 1.2rem;">Example 2</h4>
+  <div class="code-block" style="font-size:0.85rem;">
+<span class="cm">Input:</span>  nums = [3, 2, 1, 0, 4]
+<span class="cm">Output:</span> <span class="kw">false</span>
+<span class="cm">Explanation:</span> You will always arrive at index 3 no matter what. Its maximum jump length is 0, which makes it impossible to reach the last index.
+  </div>
+
+  <h4 style="color: var(--text); margin-top: 1.2rem;">Constraints</h4>
+  <ul style="color: var(--text-muted); padding-left: 1.5rem; margin-top: 0.4rem;">
+    <li><code>1 &le; nums.length &le; 10<sup>4</sup></code></li>
+    <li><code>0 &le; nums[i] &le; 10<sup>5</sup></code></li>
+  </ul>
+</div>
+
+<!-- ============================================================ -->
+
 <p>We're going to derive the solution <strong>from scratch</strong> — not just memorize the loop. By the end, you'll understand <strong>why</strong> tracking a single variable works, why greedy beats DP here, and how to spot the same pattern in other reachability problems.</p>
 
 <!-- ============================================================ -->
