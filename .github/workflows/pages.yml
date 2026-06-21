@@ -1,0 +1,144 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build index page
+        run: |
+          # Generate index.html that links to all HTML files (excluding index.html itself)
+          cat > index.html << 'HTMLEOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Leetcode Solutions</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: #0d1117;
+                color: #c9d1d9;
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                padding: 40px 20px;
+              }
+              .container { max-width: 720px; width: 100%; }
+              h1 {
+                font-size: 2rem;
+                margin-bottom: 8px;
+                color: #58a6ff;
+              }
+              .subtitle {
+                color: #8b949e;
+                margin-bottom: 32px;
+                font-size: 0.95rem;
+              }
+              .solution-list {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+              }
+              .solution-card {
+                background: #161b22;
+                border: 1px solid #30363d;
+                border-radius: 8px;
+                padding: 16px 20px;
+                transition: border-color 0.2s, background 0.2s;
+              }
+              .solution-card:hover {
+                border-color: #58a6ff;
+                background: #1c2128;
+              }
+              .solution-card a {
+                color: #58a6ff;
+                text-decoration: none;
+                font-size: 1.1rem;
+                font-weight: 500;
+              }
+              .solution-card a:hover { text-decoration: underline; }
+              .file-size {
+                color: #8b949e;
+                font-size: 0.85rem;
+                margin-top: 4px;
+              }
+              footer {
+                margin-top: 48px;
+                padding-top: 16px;
+                border-top: 1px solid #30363d;
+                color: #484f58;
+                font-size: 0.8rem;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>🧩 Leetcode Solutions</h1>
+              <p class="subtitle">Interactive visualizations of dynamic programming problems</p>
+              <div class="solution-list">
+          HTMLEOF
+
+          # Find all .html files (excluding index.html) and add them as cards
+          found=0
+          for f in *.html; do
+            [ -e "$f" ] || continue
+            [ "$f" = "index.html" ] && continue
+            name="${f%.html}"
+            # Human-readable title from filename
+            title=$(echo "$name" | sed 's/-/ /g' | sed 's/\b\(.\)/\u\1/g')
+            size=$(du -h "$f" 2>/dev/null | cut -f1)
+            found=$((found + 1))
+            cat >> index.html << HTMLEOF
+                <div class="solution-card">
+                  <a href="${f}">${title}</a>
+                  <div class="file-size">${size}</div>
+                </div>
+          HTMLEOF
+          done
+
+          if [ "$found" -eq 0 ]; then
+            echo '<p>No solutions generated yet. Check back soon!</p>' >> index.html
+          fi
+
+          cat >> index.html << 'HTMLEOF'
+              </div>
+              <footer>Built with GitHub Actions &mdash; <a href="https://github.com/Cartmanishere/leetcode" style="color:#484f58;">source</a></footer>
+            </div>
+          </body>
+          </html>
+          HTMLEOF
+
+          echo "Generated index.html with $found solution(s) linked."
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

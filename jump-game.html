@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jump Game — First Principles & Greedy Intuition</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #334155;
+    --border: #475569;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --red: #f87171;
+    --pink: #f472b6;
+    --orange: #fb923c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 6rem; }
+
+  h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+  h1 .gradient-text { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { font-size: 1.5rem; font-weight: 700; margin: 2.5rem 0 1rem; color: var(--accent); border-bottom: 2px solid var(--surface2); padding-bottom: 0.4rem; }
+  h3 { font-size: 1.15rem; font-weight: 600; margin: 1.5rem 0 0.6rem; color: var(--accent2); }
+  p { margin: 0.6rem 0; color: var(--text-muted); }
+  strong { color: var(--text); }
+  code { background: var(--surface2); padding: 0.15em 0.45em; border-radius: 4px; font-size: 0.9em; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+  .tag { display: inline-block; background: var(--surface2); color: var(--accent); padding: 0.15em 0.6em; border-radius: 20px; font-size: 0.8rem; margin: 0.15rem 0.25rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+  }
+
+  /* CONCEPT BOX */
+  .concept-box {
+    background: linear-gradient(135deg, #1e293b 0%, #1a2340 100%);
+    border: 2px solid var(--accent2);
+    border-radius: 16px;
+    padding: 1.8rem 2rem;
+    margin: 1.5rem 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .concept-box::before {
+    content: '💡';
+    position: absolute;
+    top: 12px; right: 16px;
+    font-size: 1.8rem;
+    opacity: 0.4;
+  }
+  .concept-box h4 { color: var(--accent); font-size: 1.1rem; margin-bottom: 0.6rem; }
+
+  .formula {
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 1rem 1.4rem;
+    margin: 0.8rem 0;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.95rem;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* ===== ARRAY VISUALIZATION ===== */
+  .array-viz-wrapper {
+    overflow-x: auto;
+    margin: 1.2rem 0;
+  }
+  .array-viz {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    margin: 0.5rem 0;
+    position: relative;
+  }
+  .arr-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    position: relative;
+  }
+  .arr-idx {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 2px;
+  }
+  .arr-val-box {
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    transition: background 0.35s, border-color 0.35s, transform 0.3s;
+    position: relative;
+  }
+  .arr-val-box.current {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    transform: scale(1.12);
+    z-index: 2;
+    box-shadow: 0 0 18px var(--accent);
+    font-weight: 800;
+  }
+  .arr-val-box.reachable-zone {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .arr-val-box.last-index {
+    background: var(--accent2);
+    color: #fff;
+    border-color: var(--accent2);
+    box-shadow: 0 0 12px var(--accent2);
+  }
+  .arr-val-box.stuck {
+    background: rgba(248, 113, 113, 0.3);
+    border-color: var(--red);
+    color: var(--red);
+  }
+  .arr-val-box.unreachable {
+    background: rgba(248, 113, 113, 0.12);
+    border-color: var(--red);
+    opacity: 0.4;
+  }
+  .arr-val-box.success {
+    background: var(--green);
+    color: var(--bg);
+    border-color: var(--green);
+    animation: glow-best 1.2s ease-in-out infinite;
+  }
+  @keyframes glow-best {
+    0%, 100% { box-shadow: 0 0 6px var(--green); }
+    50% { box-shadow: 0 0 20px var(--green); }
+  }
+
+  /* Jump arc indicator under cells */
+  .arr-jump {
+    font-size: 0.7rem;
+    color: var(--orange);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 2px;
+    font-weight: 600;
+  }
+  .arr-reach {
+    font-size: 0.7rem;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 2px;
+    font-weight: 500;
+  }
+
+  /* Reach bar below */
+  .reach-bar-wrapper {
+    position: relative;
+    height: 8px;
+    background: var(--surface2);
+    border-radius: 4px;
+    margin: 1rem 0;
+    overflow: visible;
+  }
+  .reach-bar-fill {
+    position: absolute;
+    left: 0; top: 0;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+  .reach-bar-marker {
+    position: absolute;
+    top: -4px;
+    width: 3px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: left 0.5s ease;
+  }
+
+  /* DECISION VISUAL */
+  .decision-viz {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+  }
+  .decision-branch {
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 0.6rem 1rem;
+    transition: all 0.3s;
+  }
+  .decision-branch.chosen {
+    border-color: var(--green);
+    background: rgba(74, 222, 128, 0.12);
+    box-shadow: 0 0 14px rgba(74, 222, 128, 0.3);
+  }
+  .decision-branch.rejected {
+    border-color: var(--red);
+    background: rgba(248, 113, 113, 0.08);
+    opacity: 0.5;
+  }
+  .decision-vs {
+    color: var(--yellow);
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+
+  /* BUTTONS */
+  .btn-group { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 0.8rem 0; }
+  .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .btn:hover { background: var(--border); border-color: var(--accent); }
+  .btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .btn.accent { background: var(--accent2); border-color: var(--accent2); color: #fff; font-weight: 600; }
+  .btn.accent:hover { filter: brightness(1.15); }
+
+  /* STEP DISPLAY */
+  .step-indicator {
+    display: flex; align-items: center; gap: 0.5rem; margin: 1.2rem 0;
+    font-size: 0.9rem; color: var(--text-muted);
+  }
+  .step-indicator .step-num {
+    background: var(--accent2); color: #fff;
+    padding: 0.15rem 0.6rem; border-radius: 12px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+  .code-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.3rem;
+    margin: 1rem 0;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    white-space: pre;
+  }
+  .code-block .kw { color: #ff7b72; }
+  .code-block .fn { color: #d2a8ff; }
+  .code-block .str { color: #a5d6ff; }
+  .code-block .cm { color: #8b949e; font-style: italic; }
+  .code-block .num { color: #79c0ff; }
+
+  /* PROGRESS */
+  .progress-bar {
+    width: 100%; height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    margin: 0.5rem 0;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  .result-box {
+    background: linear-gradient(135deg, #1a2340, #1e293b);
+    border: 2px solid var(--green);
+    border-radius: 12px;
+    padding: 1.2rem 1.6rem;
+    margin: 1.2rem 0;
+    font-size: 1.1rem;
+  }
+  .result-box .big-str { font-size: 1.6rem; font-weight: 800; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+  .result-box.success-box { border-color: var(--green); }
+  .result-box.success-box .big-str { color: var(--green); }
+  .result-box.fail-box { border-color: var(--red); }
+  .result-box.fail-box .big-str { color: var(--red); }
+
+  .tip-box {
+    background: rgba(251, 146, 60, 0.1);
+    border-left: 4px solid var(--orange);
+    padding: 0.8rem 1rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+  }
+  .tip-box::before { content: '🔑 '; }
+
+  /* DP TABLE */
+  .dp-table-wrapper {
+    overflow-x: auto;
+    margin: 1.2rem 0;
+  }
+  .dp-table {
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    margin: 0 auto;
+  }
+  .dp-table th, .dp-table td {
+    min-width: 52px;
+    padding: 0.35rem 0.5rem;
+    text-align: center;
+    border: 1px solid var(--border);
+    transition: background 0.4s, transform 0.3s, box-shadow 0.3s;
+  }
+  .dp-table th {
+    background: var(--surface2);
+    color: var(--accent2);
+    font-weight: 600;
+    font-size: 0.78rem;
+  }
+  .dp-table td {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .dp-table td.highlight-cell {
+    transform: scale(1.1);
+    box-shadow: 0 0 16px var(--accent);
+    z-index: 2;
+    border-color: var(--accent);
+    font-weight: 800;
+    background: rgba(56, 189, 248, 0.2);
+    color: var(--accent);
+  }
+  .dp-table td.success-cell {
+    background: rgba(74, 222, 128, 0.3);
+    border-color: var(--green);
+    color: var(--green);
+    font-weight: 800;
+  }
+  .dp-table td.fail-cell {
+    background: rgba(248, 113, 113, 0.2);
+    border-color: var(--red);
+    color: var(--red);
+    font-weight: 800;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 640px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+
+  /* SUBMISSIONS */
+  .submissions-section { margin-top: 3rem; }
+  .submission-entry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin: 1.2rem 0;
+    overflow: hidden;
+  }
+  .submission-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.4rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+  }
+  .submission-header:hover { background: var(--surface2); }
+  .submission-header .left { display: flex; align-items: center; gap: 0.8rem; }
+  .submission-header .chevron {
+    font-size: 1.2rem; transition: transform 0.3s;
+    color: var(--text-muted);
+  }
+  .submission-entry.open .submission-header .chevron { transform: rotate(90deg); }
+  .submission-header .title { font-weight: 700; font-size: 1.05rem; }
+  .badge {
+    display: inline-block;
+    padding: 0.2em 0.7em; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 700;
+  }
+  .badge.bug    { background: rgba(248,113,113,0.15); color: var(--red); }
+  .badge.fixed  { background: rgba(74,222,128,0.15); color: var(--green); }
+  .badge.warn   { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .badge.info   { background: rgba(56,189,248,0.12); color: var(--accent); }
+  .submission-body {
+    display: none;
+    padding: 0 1.4rem 1.4rem;
+    border-top: 1px solid var(--border);
+  }
+  .submission-entry.open .submission-body { display: block; }
+
+  .critique-card {
+    background: rgba(248,113,113,0.06);
+    border-left: 4px solid var(--red);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.2rem;
+    margin: 1rem 0;
+  }
+  .critique-card h5 { color: var(--red); margin-bottom: 0.3rem; font-size: 0.95rem; }
+  .fix-card {
+    background: rgba(74,222,128,0.06);
+    border-left: 4px solid var(--green);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.2rem;
+    margin: 1rem 0;
+  }
+  .fix-card h5 { color: var(--green); margin-bottom: 0.3rem; font-size: 0.95rem; }
+  .score-bar {
+    display: flex; align-items: center; gap: 0.6rem;
+    margin: 0.8rem 0;
+  }
+  .score-pill {
+    background: var(--surface2);
+    border-radius: 20px;
+    padding: 0.3rem 1rem;
+    font-weight: 700; font-size: 0.9rem;
+  }
+  .score-pill.high { color: var(--green); border: 1px solid var(--green); }
+  .score-pill.med  { color: var(--yellow); border: 1px solid var(--yellow); }
+  .score-pill.low  { color: var(--red); border: 1px solid var(--red); }
+
+  /* Jump arc visualization */
+  .jump-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .array-viz {
+    position: relative;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>
+  <span class="gradient-text">55. Jump Game</span><br>
+  <small style="font-size:1rem;font-weight:400;color:var(--text-muted)">First-principles: from "how far can I go?" to the greedy one-pass solution</small>
+</h1>
+
+<p>We're going to derive the solution <strong>from scratch</strong> — not just memorize the loop. By the end, you'll understand <strong>why</strong> tracking a single variable works, why greedy beats DP here, and how to spot the same pattern in other reachability problems.</p>
+
+<!-- ============================================================ -->
+<h2>1. What are we really being asked?</h2>
+
+<div class="card">
+  <p>You start at index 0. At each position <code>i</code>, the number <code>nums[i]</code> tells you the <strong>maximum</strong> distance you can leap forward — but you can choose <em>any</em> smaller jump too. You want to know: <strong>can I land on the last index?</strong></p>
+
+  <p>Let's think about what makes this possible or impossible:</p>
+
+  <div class="concept-box">
+    <h4>Two equivalent ways to see the problem</h4>
+    <p><strong>Forward view:</strong> From where I am, how far can I reach? At each step, expand my "reachable frontier." If it ever falls short of a position I need to reach → <span style="color:var(--red)">stuck</span>.</p>
+    <p style="margin-top:0.4rem"><strong>Backward view:</strong> Starting from the last index, work backwards. Which positions can jump to a position that's already "good"? If index 0 is good → <span style="color:var(--green)">success</span>.</p>
+    <p style="margin-top:0.6rem;color:var(--accent);font-weight:600">The forward view is simpler — and that's the greedy approach.</p>
+  </div>
+
+  <p>Concrete examples:</p>
+
+  <p><strong>Example 1:</strong> <code>[2, 3, 1, 1, 4]</code> — starting with 2 at index 0, you can reach indices 1 and 2. From index 1 (value 3), you can reach all the way to index 4 (the end). <span style="color:var(--green)">✅ Reachable.</span></p>
+
+  <div class="array-viz-wrapper">
+    <div class="array-viz" id="static-demo1"></div>
+  </div>
+
+  <p><strong>Example 2:</strong> <code>[3, 2, 1, 0, 4]</code> — from index 0 (3) you can reach up to index 3. But at index 3, the value is 0 — you can't move further. No matter which path you take, you get <strong>trapped</strong> at index 3. <span style="color:var(--red)">❌ Unreachable.</span></p>
+
+  <div class="array-viz-wrapper">
+    <div class="array-viz" id="static-demo2"></div>
+  </div>
+
+  <div class="concept-box">
+    <h4>The "aha" moment</h4>
+    <p>You don't need to plan a full path. You just need to know: as you scan left to right, is there any point where the <strong>furthest reachable index</strong> falls behind your current position?</p>
+    <p style="margin-top:0.5rem;color:var(--accent)">If <code>maxReach &lt; i</code> at any point → you're stuck. Otherwise, keep going and update <code>maxReach = max(maxReach, i + nums[i])</code>.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>2. The greedy recurrence</h2>
+
+<p>Define <code>maxReach</code> = the <strong>furthest index you can reach so far</strong>.</p>
+
+<div class="formula">
+<span style="color:var(--text-muted)">Initial state:</span>
+<span style="color:var(--accent)">maxReach</span> = <span style="color:var(--num)">0</span>       <span style="color:var(--text-muted)">// Initially, you can only reach index 0 (your start)</span>
+
+<span style="color:var(--text-muted)">At each position i:</span>
+<span style="color:var(--red)">if</span> <span style="color:var(--accent)">maxReach</span> < i  →  <span style="color:var(--red)">return false</span>   <span style="color:var(--text-muted)">// You can't even get to position i</span>
+
+<span style="color:var(--accent)">maxReach</span> = max( <span style="color:var(--accent)">maxReach</span>,  <span style="color:var(--green)">i + nums[i]</span> )
+              └─ stay where I am   └─ jump from i as far as I can
+
+<span style="color:var(--text-muted)">If we finish the loop without getting stuck:</span>
+<span style="color:var(--green)">return true</span>
+</div>
+
+<p>Break this down:</p>
+<ul style="color:var(--text-muted);padding-left:1.5rem;">
+  <li><strong style="color:var(--red)">Stuck check:</strong> if the furthest you can reach (<code>maxReach</code>) is <em>behind</em> the position you're at (<code>i</code>), you physically cannot be at position <code>i</code>. Game over.</li>
+  <li><strong style="color:var(--green)">Reach expansion:</strong> from position <code>i</code>, you can jump up to <code>i + nums[i]</code>. Update <code>maxReach</code> if this extends your frontier.</li>
+  <li><strong style="color:var(--accent2)">Implicit win:</strong> if you make it through the entire array without getting stuck, you can reach the last index. (Actually, you can early-exit as soon as <code>maxReach ≥ last_index</code>.)</li>
+</ul>
+
+<div class="concept-box">
+  <h4>Why this is greedy (and why greedy works here)</h4>
+  <p>At each step, you take the <strong>locally optimal action</strong>: jump as far as you can from wherever you are. But unlike many greedy problems, there's no tradeoff — reaching <em>further</em> can never hurt you. Here's why:</p>
+  <ol style="padding-left:1.5rem;color:var(--text-muted)">
+    <li>If you can reach index <code>j</code>, you can also reach <em>every</em> index between your current position and <code>j</code> (just take smaller jumps).</li>
+    <li>So "can reach" is <strong>monotonic</strong> — from index <code>i</code>, you create a continuous reachable interval <code>[i, i+nums[i]]</code>.</li>
+    <li>The union of reachable intervals from all visited positions is <code>[0, maxReach]</code> — a single contiguous block from the start.</li>
+    <li>Since <code>maxReach</code> only grows, there's never a reason to be "strategic" about which position to jump to — <strong>farther is always better</strong>.</li>
+  </ol>
+  <p style="margin-top:0.4rem;color:var(--accent)">This monotonicity is what makes greedy optimal. If jumps were exact (not "up to"), or if there were costs, greedy would fail — and that's when DP takes over.</p>
+</div>
+
+<div class="tip-box">
+  <strong>The key insight:</strong> the question "can I reach position i?" is answered by one value: <code>maxReach</code>. We don't need to try every path (O(2ⁿ)) or build a DP array of reachable positions (O(n²·m)). One scan, one variable — O(n) time, O(1) space.
+</div>
+
+<!-- ============================================================ -->
+<h2>3. Interactive walkthrough</h2>
+
+<p>Choose an example and step through the greedy scan:</p>
+
+<div class="btn-group" id="example-btns">
+  <button class="btn active" data-arr="2,3,1,1,4">[2,3,1,1,4] ✅</button>
+  <button class="btn" data-arr="3,2,1,0,4">[3,2,1,0,4] ❌</button>
+  <button class="btn" data-arr="1,2,3,4,5">[1,2,3,4,5] ✅</button>
+  <button class="btn" data-arr="2,0,6,9,8,4,5,0,8,9,1,2,9,6,8,8,0,6,3,1,2,2,1,2,6,5,3,1,2,2,6,4,2,4,3,0,0,0,3,8,2,4,0,1,2,0,1,4,6,5,8,0,7,9,3,4,6,6,5,8,9,3,4,3,7,0,4,9,0,9,8,4,3,0,7,7,1,9,1,9,4,9,0,1,9,5,7,7,1,5,8,2,8,2,6,8,2,2,7,5,1,7,9,6]">[LC #166] ✅</button>
+  <button class="btn" data-arr="2,0,0">[2,0,0] ✅</button>
+  <button class="btn" data-arr="1,0,1,0">[1,0,1,0] ❌</button>
+</div>
+
+<div class="card">
+  <div class="array-viz-wrapper">
+    <div class="array-viz" id="array-display"></div>
+  </div>
+
+  <div class="reach-bar-wrapper" id="reach-bar-wrapper" style="display:none;">
+    <div class="reach-bar-fill" id="reach-bar-fill" style="width:0%"></div>
+    <div class="reach-bar-marker" id="reach-bar-marker" style="left:0%"></div>
+  </div>
+
+  <div class="step-indicator" id="step-info">
+    <span class="step-num" id="step-num">—</span>
+    <span id="step-desc">Click "Step Forward" to begin</span>
+  </div>
+
+  <div class="decision-viz" id="decision-viz" style="display:none">
+    <div class="decision-branch" id="branch-check">
+      <span style="color:var(--yellow)">CHECK</span><br>
+      <small>maxReach ≥ i?</small><br>
+      <strong id="val-check">—</strong>
+    </div>
+    <span class="decision-vs">→</span>
+    <div class="decision-branch" id="branch-result">
+      <span style="color:var(--accent)">maxReach</span><br>
+      <span style="color:var(--accent)">update</span><br>
+      <strong id="val-update">—</strong>
+    </div>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+  <div class="btn-group">
+    <button class="btn accent" id="btn-step">▶ Step Forward</button>
+    <button class="btn" id="btn-reset">↺ Reset</button>
+    <button class="btn" id="btn-auto">⟳ Auto-Play</button>
+    <button class="btn" id="btn-jump">⏩ Jump to End</button>
+  </div>
+
+  <div style="margin-top:1rem">
+    <label style="color:var(--text-muted);font-size:0.85rem;">Speed:</label>
+    <input type="range" id="speed-slider" min="0.2" max="2" step="0.1" value="0.6" style="margin-left:0.5rem;width:140px">
+    <span id="speed-label" style="color:var(--text-muted);font-size:0.8rem;margin-left:0.3rem">0.6s</span>
+  </div>
+</div>
+
+<div class="dp-table-wrapper">
+  <table class="dp-table" id="dp-table"></table>
+</div>
+
+<div class="result-box success-box" id="result-box" style="display:none">
+  <span style="color:var(--text-muted)">Can reach last index?</span>
+  <span class="big-str" id="result-text"></span>
+</div>
+
+<!-- ============================================================ -->
+<h2>4. Why the greedy one-pass is optimal</h2>
+
+<div class="card">
+  <p>The key property that makes greedy correct here is <strong>monotonicity of reachability</strong>.</p>
+
+  <div class="concept-box">
+    <h4>Proof sketch</h4>
+    <p><strong>Claim:</strong> After processing positions <code>[0..i]</code>, the set of reachable positions is exactly <code>[0..maxReach]</code> — a single contiguous prefix.</p>
+    <p><strong>Base case (i=0):</strong> You can reach <code>[0, nums[0]]</code> — a contiguous segment from 0.</p>
+    <p><strong>Inductive step:</strong> Assume after processing <code>[0..i-1]</code>, reachable = <code>[0..R]</code> where R = <code>maxReach</code>. At position <code>i</code>:</p>
+    <ul style="padding-left:1.5rem;color:var(--text-muted)">
+      <li>If <code>i > R</code>: position <code>i</code> is unreachable → we're stuck.</li>
+      <li>If <code>i ≤ R</code>: we can be at <code>i</code>, and from <code>i</code> we can reach up to <code>i + nums[i]</code>. So the new reachable set is <code>[0..max(R, i + nums[i])]</code> — still a contiguous prefix.</li>
+    </ul>
+    <p style="margin-top:0.4rem;color:var(--accent)">This invariant proves: <code>maxReach</code> is sufficient to track everything. No DP needed.</p>
+  </div>
+
+  <div class="tip-box">
+    <strong>When greedy fails:</strong> if the problem asked for the <em>minimum number of jumps</em> (LeetCode 45 — Jump Game II), greedy on <code>maxReach</code> alone doesn't work. You need to track "when does the current jump's range end?" — which adds a second state variable. Even then, it's still greedy, but the decision is more subtle.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>5. The complete solutions</h2>
+
+<h3>5a. Greedy — O(n) time, O(1) space (optimal)</h3>
+<div class="code-block">
+<span class="cm">/**
+ * Jump Game — Greedy
+ * Track the furthest reachable index as we scan.
+ * If we ever encounter an index beyond maxReach → stuck.
+ */</span>
+<span class="kw">function</span> <span class="fn">canJump</span>(nums) {
+  <span class="kw">let</span> maxReach = <span class="num">0</span>;
+
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i < nums.length; i++) {
+    <span class="cm">// Can I even be at this position?</span>
+    <span class="kw">if</span> (maxReach < i) <span class="kw">return</span> <span class="num">false</span>;
+
+    <span class="cm">// Extend my reach</span>
+    maxReach = Math.max(maxReach, i + nums[i]);
+
+    <span class="cm">// Early exit: already can reach the end</span>
+    <span class="kw">if</span> (maxReach >= nums.length - <span class="num">1</span>) <span class="kw">return</span> <span class="num">true</span>;
+  }
+
+  <span class="kw">return</span> <span class="num">true</span>;
+}
+</div>
+
+<h3>5b. Optimized Greedy — loop only while reachable</h3>
+<div class="code-block">
+<span class="cm">/**
+ * Jump Game — Alternative greedy phrasing
+ * Loop condition itself encodes the "stuck" check:
+ * - Continue only while i ≤ maxReach (i is reachable)
+ * - If loop finishes naturally and maxReach ≥ last index → success
+ */</span>
+<span class="kw">function</span> <span class="fn">canJump</span>(nums) {
+  <span class="kw">let</span> maxReach = <span class="num">0</span>;
+
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i <= maxReach; i++) {
+    maxReach = Math.max(maxReach, i + nums[i]);
+    <span class="kw">if</span> (maxReach >= nums.length - <span class="num">1</span>) <span class="kw">return</span> <span class="num">true</span>;
+  }
+
+  <span class="kw">return</span> <span class="num">false</span>;  <span class="cm">// maxReach < n-1 and we can't advance further</span>
+}
+</div>
+
+<h3>5c. DP — O(n²) time, O(n) space (for learning)</h3>
+<div class="code-block">
+<span class="cm">/**
+ * Jump Game — DP
+ * dp[i] = true if index i is reachable from the start
+ *
+ * Recurrence:
+ *   dp[i] = true if there exists j < i such that
+ *           dp[j] == true AND j + nums[j] >= i
+ *
+ * This is the "backward look" approach — at each i, look
+ * at all previous positions to see if any can reach i.
+ */</span>
+<span class="kw">function</span> <span class="fn">canJumpDP</span>(nums) {
+  <span class="kw">const</span> n = nums.length;
+  <span class="kw">const</span> dp = <span class="kw">new</span> Array(n).fill(<span class="num">false</span>);
+  dp[<span class="num">0</span>] = <span class="num">true</span>;  <span class="cm">// Base case: we start at index 0</span>
+
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i < n; i++) {
+    <span class="kw">if</span> (!dp[i]) <span class="kw">continue</span>;  <span class="cm">// Can't propagate from an unreachable position</span>
+
+    <span class="cm">// Mark all positions reachable from i</span>
+    <span class="kw">const</span> maxJump = Math.min(n - <span class="num">1</span>, i + nums[i]);
+    <span class="kw">for</span> (<span class="kw">let</span> j = i + <span class="num">1</span>; j <= maxJump; j++) {
+      dp[j] = <span class="num">true</span>;
+      <span class="kw">if</span> (j === n - <span class="num">1</span>) <span class="kw">return</span> <span class="num">true</span>;  <span class="cm">// Early exit</span>
+    }
+  }
+
+  <span class="kw">return</span> dp[n - <span class="num">1</span>];
+}
+</div>
+
+<div class="two-col">
+  <div class="card" style="margin:0">
+    <h4 style="color:var(--accent);margin-bottom:0.5rem">Greedy Approach</h4>
+    <ul style="color:var(--text-muted);padding-left:1.5rem;font-size:0.9rem">
+      <li>One variable: <code>maxReach</code></li>
+      <li>O(n) time, O(1) space</li>
+      <li>Exploits the contiguous reachable interval property</li>
+      <li>Standard interview answer</li>
+    </ul>
+  </div>
+  <div class="card" style="margin:0">
+    <h4 style="color:var(--green);margin-bottom:0.5rem">DP Approach</h4>
+    <ul style="color:var(--text-muted);padding-left:1.5rem;font-size:0.9rem">
+      <li>Explicit <code>dp[i]</code> = "is i reachable?"</li>
+      <li>O(n²) time, O(n) space — too slow for n=10⁴</li>
+      <li>Easier to derive if you think "backwards from the answer"</li>
+      <li>Useful stepping stone — then optimize to greedy</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>6. The backward DP (an alternative lens)</h2>
+
+<div class="card">
+  <p>There's a third approach that's also O(n) — scanning <strong>right to left</strong>:</p>
+
+  <div class="concept-box">
+    <h4>Backward DP / "good position" approach</h4>
+    <p>Define <code>lastGood</code> = the <strong>rightmost index</strong> we know can reach the end. Initially, <code>lastGood = n - 1</code> (the last index can trivially reach itself).</p>
+    <p>Scan from right to left. At position <code>i</code>, ask: <strong>can I jump from i to anywhere ≥ lastGood?</strong> If <code>i + nums[i] ≥ lastGood</code>, then <code>i</code> is also "good" — set <code>lastGood = i</code>.</p>
+    <p>At the end: if <code>lastGood === 0</code> → we can reach the end from the start.</p>
+  </div>
+
+  <div class="code-block">
+<span class="cm">/**
+ * Jump Game — Backward DP
+ * O(n) time, O(1) space
+ */</span>
+<span class="kw">function</span> <span class="fn">canJumpBwd</span>(nums) {
+  <span class="kw">let</span> lastGood = nums.length - <span class="num">1</span>;
+
+  <span class="kw">for</span> (<span class="kw">let</span> i = nums.length - <span class="num">2</span>; i >= <span class="num">0</span>; i--) {
+    <span class="kw">if</span> (i + nums[i] >= lastGood) {
+      lastGood = i;  <span class="cm">// This position can reach a "good" position</span>
+    }
+  }
+
+  <span class="kw">return</span> lastGood === <span class="num">0</span>;
+}
+  </div>
+
+  <div class="tip-box">
+    The backward scan is elegant and also O(n) / O(1). It's the "reverse" of the forward greedy. Choose whichever feels more natural — in an interview, showing either one demonstrates solid reasoning. The backward version is especially nice when the follow-up is <strong>"find the minimum number of jumps"</strong> (Jump Game II), because the "good position" concept generalizes well.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>7. Recognizing this pattern in other problems</h2>
+
+<div class="card">
+  <table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+    <thead>
+      <tr style="text-align:left">
+        <th style="padding:0.5rem;border-bottom:2px solid var(--border);color:var(--accent)">Problem</th>
+        <th style="padding:0.5rem;border-bottom:2px solid var(--border);color:var(--accent)">Core Idea</th>
+        <th style="padding:0.5rem;border-bottom:2px solid var(--border);color:var(--accent)">Pattern</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Jump Game</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>maxReach = max(maxReach, i + nums[i])</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Reachability frontier</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Jump Game II</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>maxReach + currentEnd + jumps counter</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Reachability + level-order BFS in 1D</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Can Place Flowers</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>greedy place if no adjacent conflict</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Local optimal = global optimal</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Gas Station</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>track surplus, reset when negative</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Contiguous segment with maintenance of invariant</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Video Stitching / Min Taps to Water Garden</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>maxReach from current coverage window</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Interval coverage + greedy frontier</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="margin-top:0.8rem;color:var(--text-muted)">The common thread: a <strong>monotonically expanding frontier</strong> where "further is always better." When you spot that property, greedy is on the table — and it's usually the optimal answer.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2>8. First-principles derivation checklist</h2>
+
+<div class="concept-box">
+  <h4>When you see a "can you reach the end?" problem, ask:</h4>
+  <ol style="padding-left:1.5rem;color:var(--text-muted)">
+    <li><strong>Is reachability monotonic?</strong> — Can I reach every position between my start and the furthest reachable? If yes, the reachable set is a contiguous prefix → one variable suffices.</li>
+    <li><strong>What's the state?</strong> — For Jump Game I, it's just <code>maxReach</code>. For Jump Game II (minimum jumps), you need <code>maxReach</code> + <code>currentEnd</code> + <code>jumps</code>. The complexity of the state tells you whether it's simple greedy or layered greedy.</li>
+    <li><strong>Does "further" always help?</strong> — If there's a cost, penalty, or diminishing return associated with jumping far, greedy fails. That's your cue to reach for DP.</li>
+    <li><strong>Can I early-exit?</strong> — As soon as <code>maxReach ≥ lastIndex</code>, return <code>true</code>. As soon as <code>i > maxReach</code>, return <code>false</code>. These early exits often speed up real-world performance dramatically on sparse inputs.</li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2>9. Submissions <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400">— click to expand</span></h2>
+
+<div class="submissions-section">
+  <!-- ===== SUBMISSION 1 ===== -->
+  <div class="submission-entry" id="submission-1">
+    <div class="submission-header" onclick="toggleSubmission('submission-1')">
+      <div class="left">
+        <span class="chevron">▶</span>
+        <span class="title">Submission #1 — Forward greedy with early exit (your code)</span>
+        <span class="badge bug">2 bugs</span>
+        <span class="badge warn">3 issues</span>
+      </div>
+      <span style="color:var(--text-muted);font-size:0.8rem">Click to expand</span>
+    </div>
+    <div class="submission-body">
+
+      <h4 style="color:var(--text-muted);margin-top:0.8rem">Your submitted code:</h4>
+      <div class="code-block">
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">canJump</span>(<span class="kw">self</span>, nums: List[<span class="kw">int</span>]) -> <span class="kw">bool</span>:
+
+        max_reach = <span class="num">0</span>        
+        <span class="kw">for</span> idx, num <span class="kw">in</span> <span class="fn">enumerate</span>(nums):
+            <span class="kw">if</span> max_reach < idx:
+                <span class="kw">return</span> <span class="num">False</span>
+            <span class="kw">if</span> max_reach >= <span class="fn">len</span>(nums):          <span class="callout">← BUG #1: off-by-one on the last index</span>
+                <span class="kw">return</span> <span class="num">True</span>
+
+            max_reach = <span class="fn">max</span>(max_reach, idx + num)
+            
+        <span class="kw">return</span> <span class="num">False</span>                     <span class="callout">← BUG #2: wrong fallback value</span>
+      </div>
+
+      <div class="score-bar" style="margin-top:1.2rem">
+        <span style="font-weight:700;color:var(--text)">Interviewer verdict:</span>
+        <span class="score-pill low">Would not pass</span>
+        <span style="color:var(--text-muted);font-size:0.85rem">Correct structure, correct greedy thinking — but two logic bugs produce wrong answers on core examples</span>
+      </div>
+
+      <div class="concept-box" style="margin-top:1rem">
+        <h4>What you got right first</h4>
+        <p style="color:var(--text-muted)">Let me start with a genuine compliment: <strong>you understand the greedy approach correctly.</strong> The structure — stuck check, reach expansion, early exit — is exactly right. You're tracking <code>max_reach</code> as the frontier and using <code>enumerate()</code> for clean iteration. The <code>max_reach &lt; idx</code> stuck check is in the right place. This is the right algorithm — it's just two fragile mistakes in the numbers.</p>
+      </div>
+
+      <h3 style="color:var(--red);margin-top:1.5rem">🔴 Blocking Bugs</h3>
+
+      <div class="critique-card">
+        <h5>Bug #1 — <code>max_reach >= len(nums)</code> is an off-by-one error <span class="badge bug">BLOCKING</span></h5>
+        <p>The last index of an array of length <code>n</code> is <strong><code>n - 1</code></strong>, not <code>n</code>. By comparing against <code>len(nums)</code> instead of <code>len(nums) - 1</code>, your early exit <strong>never fires</strong> when the answer is <code>True</code> — because <code>max_reach</code> can never exceed the array bounds. When <code>max_reach == n - 1</code> (exactly at the last index), the condition <code>max_reach >= n</code> is <code>False</code>, so it keeps scanning — and eventually hits the <code>return False</code> fallback.</p>
+
+        <p style="margin-top:0.5rem"><strong>Counterexample:</strong> <code>[2, 3, 1, 1, 4]</code> — the main LeetCode example. Expected: <code>True</code>. Your code: <code>False</code>.</p>
+
+        <table style="border-collapse:collapse;font-size:0.82rem;margin:0.5rem 0;width:100%">
+          <tr style="background:var(--surface2)">
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">idx</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">num</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">max_reach (before)</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">stuck?<br>(max_reach &lt; idx)</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">early exit?<br>(max_reach >= 5)</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">max_reach (after)</th>
+          </tr>
+          <tr>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">0</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--accent)">2</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">0</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--green)">No (0≥0)</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--red)">No (0<5)</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--accent)">2</td>
+          </tr>
+          <tr>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">1</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">3</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">2</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--green)">No (2≥1)</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--red)">No (2<5)</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--accent)">4</td>
+          </tr>
+          <tr style="background:rgba(74,222,128,0.08)">
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">2</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">1</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--green)">4</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--green)">No (4≥2)</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--yellow);font-weight:700">No (4<5) ← SHOULD BE TRUE!</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">4</td>
+          </tr>
+          <tr>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">3</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">1</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">4</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--green)">No</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--red)">No (4<5)</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">4</td>
+          </tr>
+          <tr>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">4</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">4</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">4</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--green)">No</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--red)">No (4<5)</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">8</td>
+          </tr>
+          <tr style="background:rgba(248,113,113,0.08)">
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">loop end</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--red);font-weight:700">return False ← WRONG</td>
+          </tr>
+        </table>
+
+        <p style="margin-top:0.6rem">At idx=1, max_reach becomes <strong>4</strong>, which equals <code>len(nums) - 1</code> = 4. The last index is reachable! But because your check tests <code>max_reach >= 5</code>, it misses this. The code runs to completion and returns <code>False</code>.</p>
+
+        <p style="color:var(--yellow);margin-top:0.4rem">⚠️ This bug <strong>always</strong> fires for valid inputs where max_reach lands exactly on the last index. It's not an edge case — it's the normal case for the problem's own example.</p>
+
+        <div class="fix-card">
+          <h5>Fix:</h5>
+          <code>if max_reach >= len(nums) - 1: return True</code>
+          <p style="margin-top:0.3rem;color:var(--text-muted)">The last valid index is <code>n-1</code>. When max_reach covers it, you're done.</p>
+        </div>
+      </div>
+
+      <div class="critique-card">
+        <h5>Bug #2 — <code>return False</code> at the end is logically backwards <span class="badge bug">BLOCKING</span></h5>
+        <p>Even after fixing Bug #1, this bug would still bite on the single-element case. Consider <code>[0]</code> (n=1):</p>
+
+        <table style="border-collapse:collapse;font-size:0.82rem;margin:0.5rem 0;width:100%">
+          <tr style="background:var(--surface2)">
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">idx</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">num</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">max_reach (before)</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">stuck?</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">early exit?<br>(max_reach >= 0)</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">max_reach (after)</th>
+          </tr>
+          <tr style="background:rgba(248,113,113,0.08)">
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">0</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">0</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">0</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--green)">No</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--green);font-weight:700">Yes! (0≥0)</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">—</td>
+          </tr>
+        </table>
+
+        <p style="margin-top:0.5rem">With Bug #1 fixed, the single-element case would work. But <strong>conceptually</strong>, the <code>return False</code> is wrong. Think about what it means for the loop to complete without returning:</p>
+
+        <ul style="padding-left:1.5rem;color:var(--text-muted);margin-top:0.3rem">
+          <li>The <strong>stuck check</strong> (<code>max_reach &lt; idx</code>) never fired → we were never stuck at any position.</li>
+          <li>The <strong>early exit</strong> (<code>max_reach >= n - 1</code>) never fired → max_reach never covered the last index.</li>
+        </ul>
+
+        <p style="margin-top:0.5rem">But if we processed every index without getting stuck, that means <strong>we visited every position including the last one</strong>. By definition, the last index is reachable. The correct fallback after a complete scan is <code>return True</code>.</p>
+
+        <p style="color:var(--yellow);margin-top:0.4rem">⚠️ In practice, with Bug #1 fixed and the early exit working, this <code>return False</code> would only be hit on edge cases where the early exit somehow never fires despite reaching the end. But semantically <code>return True</code> is the correct invariant, and writing <code>return False</code> signals to any reviewer that you haven't thought through what "loop completed" actually means.</p>
+
+        <div class="fix-card">
+          <h5>Fix:</h5>
+          <code>return True</code> — if we scanned the whole array without getting stuck, the last index is reachable.
+        </div>
+      </div>
+
+      <h3 style="color:var(--yellow);margin-top:1.5rem">🟡 Design / Code Quality Issues</h3>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #3 — Trailing whitespace and inconsistent blank lines</h5>
+        <p><code>max_reach = 0</code> is followed by 8 trailing spaces before the newline. Then there's a blank line before the <code>for</code> loop. This is minor, but in FAANG interviews, clean formatting is a baseline expectation — it tells the interviewer you're careful. The fix: one blank line between logical blocks (initialization → loop) with no trailing whitespace.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #4 — Early-exit check positioned before the max_reach update</h5>
+        <p>Your early-exit check (<code>max_reach >= len(nums)</code>) happens <strong>before</strong> the <code>max()</code> update. This means if the <em>current</em> position's jump extends reach to the end, you won't catch it until the <strong>next</strong> iteration — wasting a loop cycle. It's not a correctness bug, but it's a minor inefficiency and a sign you haven't fully traced the control flow.</p>
+
+        <div class="code-block" style="font-size:0.82rem">
+<span class="cm"># Your order: check BEFORE update — needs one extra iteration</span>
+max_reach = <span class="fn">max</span>(max_reach, idx + num)
+<span class="kw">if</span> max_reach >= n - <span class="num">1</span>:  <span class="cm"># put this AFTER the update</span>
+    <span class="kw">return</span> <span class="num">True</span>
+        </div>
+        <p style="margin-top:0.3rem;color:var(--text-muted)">With your order, for <code>[2,3,1,1,4]</code>: at idx=1, max_reach updates to 4. But you already checked 2 ≥ 5 earlier in the iteration. So you need idx=2 to check 4 ≥ 5 — still fails. It doesn't matter here because your condition is wrong anyway, but with the correct condition it would add one unnecessary iteration. Move the check after the update.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #5 — <code>return False</code> is the opposite of what the loop-invariant says</h5>
+        <p>After a complete scan without hitting the stuck check, you've proven every position from 0 to n-1 is reachable. The loop-invariant: <strong>"after processing i, all positions ≤ max_reach are reachable."</strong> If the loop completes, max_reach ≥ n-1 (otherwise the stuck check would have fired at some point). The return value must be <code>True</code>. Writing <code>return False</code> contradicts the invariant you just maintained.</p>
+        <p style="margin-top:0.3rem;color:var(--text-muted)">This is exactly the kind of thing a FAANG interviewer would ask: <em>"Walk me through a case that hits that final return. What does it mean when the loop finishes normally?"</em> If you can't answer that, or realize it should never happen, the <code>return False</code> becomes a red flag.</p>
+      </div>
+
+      <h3 style="color:var(--green);margin-top:1.5rem">🟢 Fixed Solution</h3>
+
+      <div class="fix-card">
+        <h5>What changed and why:</h5>
+        <ul style="padding-left:1.5rem;color:var(--text-muted)">
+          <li><strong>Fixed the off-by-one:</strong> <code>len(nums) - 1</code> instead of <code>len(nums)</code></li>
+          <li><strong>Fixed the fallback:</strong> <code>return True</code> at the end — loop completion means we visited every index without getting stuck</li>
+          <li><strong>Moved the early-exit check:</strong> after the <code>max()</code> update, so we can exit in the same iteration</li>
+          <li><strong>Cleaned whitespace:</strong> removed trailing spaces, consistent blank line after initialization</li>
+        </ul>
+      </div>
+
+      <div class="code-block">
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">canJump</span>(<span class="kw">self</span>, nums: List[<span class="kw">int</span>]) -> <span class="kw">bool</span>:
+        max_reach = <span class="num">0</span>
+
+        <span class="kw">for</span> idx, num <span class="kw">in</span> <span class="fn">enumerate</span>(nums):
+            <span class="kw">if</span> max_reach < idx:              <span class="cm"># Stuck at a gap</span>
+                <span class="kw">return</span> <span class="num">False</span>
+
+            max_reach = <span class="fn">max</span>(max_reach, idx + num)  <span class="cm"># Extend reach first</span>
+
+            <span class="kw">if</span> max_reach >= <span class="fn">len</span>(nums) - <span class="num">1</span>:     <span class="cm"># Then check — can we reach the last index?</span>
+                <span class="kw">return</span> <span class="num">True</span>
+
+        <span class="kw">return</span> <span class="num">True</span>                          <span class="cm"># Scanned whole array — no gaps → reachable</span>
+      </div>
+
+      <p style="color:var(--text-muted);margin-top:0.6rem">Or the even more concise version (same correctness):</p>
+
+      <div class="code-block">
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">canJump</span>(<span class="kw">self</span>, nums: List[<span class="kw">int</span>]) -> <span class="kw">bool</span>:
+        max_reach = <span class="num">0</span>
+        <span class="kw">for</span> idx, num <span class="kw">in</span> <span class="fn">enumerate</span>(nums):
+            <span class="kw">if</span> max_reach < idx:
+                <span class="kw">return</span> <span class="num">False</span>
+            max_reach = <span class="fn">max</span>(max_reach, idx + num)
+        <span class="kw">return</span> <span class="num">True</span>
+      </div>
+
+      <h3 style="color:var(--accent);margin-top:1.5rem">🎯 Key Takeaway</h3>
+      <div class="concept-box">
+        <p style="color:var(--text-muted)"><strong>You have the algorithm. You understand the greedy insight.</strong> The stuck-check / reach-expansion / early-exit structure is exactly what a FAANG interviewer wants to see. This is a "getting warmer" submission — the thinking is correct, the implementation has two small but fatal number-errors.</p>
+
+        <p style="color:var(--text-muted);margin-top:0.5rem"><strong>But in a real interview, these bugs would sink you.</strong> Here's why — and how to catch them before the interviewer does:</p>
+
+        <ul style="padding-left:1.5rem;color:var(--text-muted);margin-top:0.5rem">
+          <li><strong>Off-by-one on array indices is interview enemy #1.</strong> Last index = <code>n - 1</code>, not <code>n</code>. Always. Whenever you write <code>len(nums)</code> in a comparison, pause and ask: "Am I comparing against the <em>length</em> or the <em>last index</em>?" If it's the latter, subtract 1.</li>
+          <li><strong>Trace the problem's own example.</strong> Before saying "done," manually trace <code>[2,3,1,1,4]</code> through your code. At idx=1, max_reach becomes 4, and n=5. 4 ≥ 4? The check should return True — but it doesn't. Tracing catches the off-by-one instantly.</li>
+          <li><strong>Every <code>return</code> should tell a story.</strong> You have three returns:
+            <br>1️⃣ <code>return False</code> when stuck → correct
+            <br>2️⃣ <code>return True</code> on early exit → correct intent
+            <br>3️⃣ <code>return False</code> at the end → "loop finished and... we failed?"
+            <br>The loop-invariant says: "if the loop finishes, we processed the entire array without getting stuck." That means success, not failure. Your final return must match your invariant.</li>
+          <li><strong>Check order matters.</strong> Update max_reach <em>before</em> checking whether it reaches the end — otherwise you need an extra iteration to catch it. This is a code-smell a sharp interviewer will notice: "Why are you checking before you've updated?"</li>
+          <li><strong>Clean formatting is part of the signal.</strong> Trailing whitespace and inconsistent spacing aren't logic bugs, but they send a message about attention to detail. In a 10-line function, every character is visible.</li>
+        </ul>
+
+        <p style="color:var(--accent);margin-top:0.8rem;font-weight:600">Bottom line: You're 10 characters away from the optimal solution. <code>- 1</code> on the comparison and <code>True</code> on the fallback — that's it. The algorithm is right. Now make the numbers right.</p>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</div>
+
+<script>
+// ===================== STATE =====================
+let currentArr = [2, 3, 1, 1, 4];
+let n = 0;
+let steps = [];
+let stepIndex = 0;
+let autoTimer = null;
+let speedMs = 600;
+let finalResult = null; // true / false
+
+function buildSteps(arr) {
+  const n = arr.length;
+  const steps = [];
+  let maxReach = 0;
+
+  for (let i = 0; i < n; i++) {
+    const wasStuck = maxReach < i;
+    const oldMaxReach = maxReach;
+    maxReach = Math.max(maxReach, i + arr[i]);
+    const canFinish = maxReach >= n - 1;
+
+    steps.push({
+      i,
+      val: arr[i],
+      maxReachBefore: oldMaxReach,
+      maxReachAfter: maxReach,
+      wasStuck,
+      canFinish,
+      isLast: i === n - 1
+    });
+
+    if (wasStuck) break;
+    if (canFinish && i < n - 1) {
+      // Mark remaining positions as "bypassed" by early exit
+      break;
+    }
+  }
+
+  // Determine overall result
+  // Check if we got stuck OR if we reached the end
+  const lastStep = steps[steps.length - 1];
+  let success;
+  if (lastStep.wasStuck) {
+    success = false;
+  } else if (lastStep.canFinish) {
+    success = true;
+  } else {
+    // Didn't get stuck, didn't early-exit — check final maxReach
+    success = lastStep.maxReachAfter >= n - 1;
+  }
+
+  return { steps, success };
+}
+
+// ===================== RENDER =====================
+function renderAll() {
+  renderArray();
+  renderReachBar();
+  renderDpTable();
+  renderDecision();
+  renderStepInfo();
+  renderProgress();
+  renderResult();
+  updateButtons();
+}
+
+function renderArray() {
+  const container = document.getElementById('array-display');
+  const activeStep = (stepIndex > 0 && stepIndex <= steps.length) ? steps[stepIndex - 1] : null;
+
+  let html = '';
+  for (let k = 0; k < n; k++) {
+    let cls = 'arr-val-box';
+
+    if (activeStep) {
+      if (k === activeStep.i) {
+        cls += ' current';
+      } else if (activeStep.wasStuck && k > activeStep.i) {
+        cls += ' unreachable';
+      } else if (k <= activeStep.maxReachAfter && k !== activeStep.i) {
+        cls += ' reachable-zone';
+      }
+
+      if (k === n - 1) {
+        if (activeStep.canFinish) cls += ' success';
+        else if (stepIndex === steps.length && !finalResult) cls += ' stuck';
+      }
+    }
+
+    // When done, show final state
+    if (stepIndex > steps.length && steps.length > 0) {
+      const finalStep = steps[steps.length - 1];
+      if (finalResult) {
+        if (k <= finalStep.maxReachAfter) cls += ' reachable-zone';
+      } else {
+        if (k <= finalStep.maxReachAfter) cls += ' reachable-zone';
+        else cls += ' unreachable';
+      }
+      if (k === n - 1) {
+        cls = 'arr-val-box ' + (finalResult ? 'success' : 'stuck');
+      }
+      if (finalStep.wasStuck && k === finalStep.i) {
+        cls += ' stuck';
+      }
+    }
+
+    if (k === n - 1 && (stepIndex === 0)) {
+      cls += ' last-index';
+    }
+
+    const reachableFromHere = k + currentArr[k];
+
+    html += `<div class="arr-col">
+      <span class="arr-idx">${k}</span>
+      <div class="${cls}">${currentArr[k]}</div>
+      <span class="arr-jump">→${Math.min(reachableFromHere, n-1)}</span>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+function renderReachBar() {
+  const wrapper = document.getElementById('reach-bar-wrapper');
+  const fill = document.getElementById('reach-bar-fill');
+  const marker = document.getElementById('reach-bar-marker');
+
+  if (stepIndex === 0) {
+    wrapper.style.display = 'none';
+    return;
+  }
+
+  wrapper.style.display = 'block';
+  const activeStep = (stepIndex <= steps.length) ? steps[stepIndex - 1] : steps[steps.length - 1];
+  const maxIdx = n - 1;
+  const reachPct = Math.min(100, (activeStep.maxReachAfter / maxIdx) * 100);
+  const markerPct = Math.min(100, (activeStep.i / maxIdx) * 100);
+
+  fill.style.width = reachPct + '%';
+  marker.style.left = markerPct + '%';
+}
+
+function renderDpTable() {
+  const table = document.getElementById('dp-table');
+  const activeStep = (stepIndex > 0 && stepIndex <= steps.length) ? steps[stepIndex - 1] : null;
+
+  let html = '<thead><tr><th>i</th>';
+  for (let k = 0; k < n; k++) html += `<th>${k}</th>`;
+  html += '</tr></thead><tbody>';
+
+  // nums row
+  html += '<tr><th>nums[i]</th>';
+  for (let k = 0; k < n; k++) {
+    let cls = '';
+    if (activeStep && k === activeStep.i && k < steps.length) cls = 'highlight-cell';
+    if (k === n - 1 && finalResult === true) cls += ' success-cell';
+    if (k === n - 1 && finalResult === false) cls += ' fail-cell';
+    html += `<td class="${cls}">${currentArr[k]}</td>`;
+  }
+  html += '</tr>';
+
+  // reachable from i row
+  html += '<tr><th>i+nums[i]</th>';
+  for (let k = 0; k < n; k++) {
+    html += `<td>${k + currentArr[k]}</td>`;
+  }
+  html += '</tr>';
+
+  // maxReach row
+  html += '<tr><th>maxReach</th>';
+  let runningMax = 0;
+  for (let k = 0; k < n; k++) {
+    // Show maxReach at position k
+    if (k < steps.length && steps[k].i === k) {
+      runningMax = steps[k].maxReachAfter;
+    }
+    let cls = '';
+    if (activeStep && k === activeStep.i) cls = 'highlight-cell';
+    if (runningMax >= n - 1 && k < n) cls += ' success-cell';
+    html += `<td class="${cls}">${runningMax}</td>`;
+  }
+  html += '</tr>';
+
+  // status row
+  html += '<tr><th>status</th>';
+  for (let k = 0; k < n; k++) {
+    let status = '—';
+    let color = 'var(--text-muted)';
+    if (k < steps.length && steps[k].i === k) {
+      if (steps[k].wasStuck) {
+        status = '❌ stuck';
+        color = 'var(--red)';
+      } else if (steps[k].canFinish) {
+        status = '✅ done';
+        color = 'var(--green)';
+      } else {
+        status = '→ cont';
+        color = 'var(--accent)';
+      }
+    } else if (k === 0) {
+      status = 'start';
+      color = 'var(--accent)';
+    }
+    html += `<td style="color:${color};font-weight:600">${status}</td>`;
+  }
+  html += '</tr>';
+
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function renderDecision() {
+  const viz = document.getElementById('decision-viz');
+  if (stepIndex === 0) {
+    viz.style.display = 'none';
+    return;
+  }
+  const step = steps[stepIndex - 1];
+  viz.style.display = 'flex';
+
+  const elCheck = document.getElementById('branch-check');
+  const elResult = document.getElementById('branch-result');
+  const valCheck = document.getElementById('val-check');
+  const valUpdate = document.getElementById('val-update');
+
+  elCheck.className = 'decision-branch';
+  elResult.className = 'decision-branch';
+
+  if (step.wasStuck) {
+    valCheck.textContent = `FAIL (${step.maxReachBefore} < ${step.i})`;
+    valUpdate.textContent = `STUCK at ${step.i}`;
+    elCheck.classList.add('rejected');
+    elResult.classList.add('rejected');
+  } else {
+    valCheck.textContent = `OK (${step.maxReachBefore} ≥ ${step.i})`;
+    valUpdate.textContent = `max(${step.maxReachBefore}, ${step.i + step.val}) = ${step.maxReachAfter}`;
+    elCheck.classList.add('chosen');
+    if (step.canFinish) {
+      elResult.classList.add('chosen');
+    }
+  }
+}
+
+function renderStepInfo() {
+  const numEl = document.getElementById('step-num');
+  const descEl = document.getElementById('step-desc');
+
+  if (stepIndex === 0) {
+    numEl.textContent = '—';
+    descEl.textContent = 'Click "Step Forward" to begin scanning the array';
+    return;
+  }
+
+  const step = steps[stepIndex - 1];
+  numEl.textContent = stepIndex;
+
+  if (step.wasStuck) {
+    descEl.innerHTML = `<strong>❌ STUCK at index ${step.i}:</strong> maxReach = <span style="color:var(--red)">${step.maxReachBefore}</span>, but we need to reach index ${step.i}. Cannot advance further. <span style="color:var(--red);font-weight:700">Return false.</span>`;
+  } else if (step.canFinish) {
+    descEl.innerHTML = `<strong>✅ At index ${step.i}:</strong> maxReach = <span style="color:var(--green)">${step.maxReachAfter}</span> ≥ last index (${n - 1}). We can jump to the end! <span style="color:var(--green);font-weight:700">Return true.</span>`;
+  } else {
+    descEl.innerHTML = `<strong>Index ${step.i} (value=${step.val}):</strong> maxReach = max(${step.maxReachBefore}, ${step.i}+${step.val}) = <span style="color:var(--accent);font-weight:700">${step.maxReachAfter}</span>. Continue scanning.`;
+  }
+}
+
+function renderProgress() {
+  const pct = n > 0 ? Math.min(100, (stepIndex / n) * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function renderResult() {
+  const box = document.getElementById('result-box');
+  const text = document.getElementById('result-text');
+
+  if (stepIndex > steps.length) {
+    // Show final result
+    box.style.display = 'block';
+    box.className = finalResult ? 'result-box success-box' : 'result-box fail-box';
+    text.textContent = finalResult ? 'true ✅' : 'false ❌';
+  } else if (stepIndex > 0) {
+    const step = steps[stepIndex - 1];
+    if (step.wasStuck || step.canFinish) {
+      box.style.display = 'block';
+      box.className = step.wasStuck ? 'result-box fail-box' : 'result-box success-box';
+      text.textContent = step.wasStuck ? 'false ❌' : 'true ✅';
+    } else {
+      box.style.display = 'none';
+    }
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function updateButtons() {
+  const btnStep = document.getElementById('btn-step');
+  const maxSteps = steps.length;
+  if (stepIndex > maxSteps) {
+    btnStep.textContent = '✓ Complete';
+    btnStep.disabled = true;
+  } else {
+    btnStep.textContent = '▶ Step Forward';
+    btnStep.disabled = false;
+  }
+}
+
+function resetState(arr) {
+  currentArr = arr;
+  n = arr.length;
+  stepIndex = 0;
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  const { steps: newSteps, success } = buildSteps(arr);
+  steps = newSteps;
+  finalResult = success;
+  renderAll();
+}
+
+function stepForward() {
+  if (stepIndex <= steps.length) {
+    stepIndex++;
+    renderAll();
+  }
+}
+
+function jumpToEnd() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  stepIndex = steps.length + 1; // Past all steps → show final state
+  renderAll();
+}
+
+function toggleAuto() {
+  if (autoTimer) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+    document.getElementById('btn-auto').textContent = '⟳ Auto-Play';
+    document.getElementById('btn-auto').classList.remove('active');
+    return;
+  }
+  document.getElementById('btn-auto').textContent = '⏸ Pause';
+  document.getElementById('btn-auto').classList.add('active');
+  autoPlay();
+}
+
+function autoPlay() {
+  if (!autoTimer) return;
+  if (stepIndex > steps.length) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+    document.getElementById('btn-auto').textContent = '⟳ Auto-Play';
+    document.getElementById('btn-auto').classList.remove('active');
+    return;
+  }
+  stepForward();
+  autoTimer = setTimeout(autoPlay, speedMs);
+}
+
+// ===================== EVENT LISTENERS =====================
+document.getElementById('btn-step').addEventListener('click', stepForward);
+document.getElementById('btn-reset').addEventListener('click', () => resetState(currentArr));
+document.getElementById('btn-auto').addEventListener('click', toggleAuto);
+document.getElementById('btn-jump').addEventListener('click', jumpToEnd);
+
+document.getElementById('speed-slider').addEventListener('input', (e) => {
+  speedMs = Math.round(parseFloat(e.target.value) * 1000);
+  document.getElementById('speed-label').textContent = (speedMs / 1000).toFixed(1) + 's';
+});
+
+document.getElementById('example-btns').addEventListener('click', (e) => {
+  if (e.target.tagName === 'BUTTON') {
+    document.querySelectorAll('#example-btns button').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    resetState(e.target.dataset.arr.split(',').map(Number));
+  }
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ') {
+    e.preventDefault();
+    stepForward();
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    if (stepIndex > 0) { stepIndex--; renderAll(); }
+  } else if (e.key === 'a') {
+    e.preventDefault();
+    toggleAuto();
+  } else if (e.key === 'r') {
+    e.preventDefault();
+    resetState(currentArr);
+  } else if (e.key === 'j') {
+    e.preventDefault();
+    jumpToEnd();
+  }
+});
+
+// ===================== STATIC DEMOS =====================
+(function renderStatics() {
+  // Static demo 1: [2,3,1,1,4] ✅
+  const demo1 = [2,3,1,1,4];
+  let html1 = '';
+  for (let k = 0; k < demo1.length; k++) {
+    const cls = k === demo1.length - 1 ? 'arr-val-box last-index' : 'arr-val-box';
+    html1 += `<div class="arr-col">
+      <span class="arr-idx">${k}</span>
+      <div class="${cls}">${demo1[k]}</div>
+      <span class="arr-jump">→${Math.min(k+demo1[k], demo1.length-1)}</span>
+    </div>`;
+  }
+  document.getElementById('static-demo1').innerHTML = html1;
+
+  // Static demo 2: [3,2,1,0,4] ❌
+  const demo2 = [3,2,1,0,4];
+  let html2 = '';
+  for (let k = 0; k < demo2.length; k++) {
+    let cls = 'arr-val-box';
+    if (k === 3) cls += ' stuck';
+    if (k === 4) cls += ' unreachable last-index';
+    html2 += `<div class="arr-col">
+      <span class="arr-idx">${k}</span>
+      <div class="${cls}">${demo2[k]}</div>
+      <span class="arr-jump">→${Math.min(k+demo2[k], demo2.length-1)}</span>
+    </div>`;
+  }
+  document.getElementById('static-demo2').innerHTML = html2;
+})();
+
+// Initial render
+resetState([2, 3, 1, 1, 4]);
+
+// ===================== SUBMISSION TOGGLE =====================
+function toggleSubmission(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+</script>
+
+</body>
+</html>

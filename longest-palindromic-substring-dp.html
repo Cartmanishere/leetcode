@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Longest Palindromic Substring — DP Deep Dive</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #334155;
+    --border: #475569;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --red: #f87171;
+    --pink: #f472b6;
+    --orange: #fb923c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 6rem; }
+
+  h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+  h1 .gradient-text { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { font-size: 1.5rem; font-weight: 700; margin: 2.5rem 0 1rem; color: var(--accent); border-bottom: 2px solid var(--surface2); padding-bottom: 0.4rem; }
+  h3 { font-size: 1.15rem; font-weight: 600; margin: 1.5rem 0 0.6rem; color: var(--accent2); }
+  p { margin: 0.6rem 0; color: var(--text-muted); }
+  strong { color: var(--text); }
+  code { background: var(--surface2); padding: 0.15em 0.45em; border-radius: 4px; font-size: 0.9em; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+  .tag { display: inline-block; background: var(--surface2); color: var(--accent); padding: 0.15em 0.6em; border-radius: 20px; font-size: 0.8rem; margin: 0.15rem 0.25rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+  }
+
+  /* CONCEPT BOX */
+  .concept-box {
+    background: linear-gradient(135deg, #1e293b 0%, #1a2340 100%);
+    border: 2px solid var(--accent2);
+    border-radius: 16px;
+    padding: 1.8rem 2rem;
+    margin: 1.5rem 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .concept-box::before {
+    content: '💡';
+    position: absolute;
+    top: 12px; right: 16px;
+    font-size: 1.8rem;
+    opacity: 0.4;
+  }
+  .concept-box h4 { color: var(--accent); font-size: 1.1rem; margin-bottom: 0.6rem; }
+
+  .formula {
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 1rem 1.4rem;
+    margin: 0.8rem 0;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.95rem;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* DP TABLE */
+  .dp-table-wrapper {
+    overflow-x: auto;
+    margin: 1.2rem 0;
+  }
+  .dp-table {
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.9rem;
+    margin: 0 auto;
+  }
+  .dp-table th, .dp-table td {
+    width: 42px; height: 42px;
+    text-align: center;
+    border: 1px solid var(--border);
+    transition: background 0.4s, transform 0.3s, box-shadow 0.3s;
+    position: relative;
+  }
+  .dp-table th {
+    background: var(--surface2);
+    color: var(--accent2);
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+  .dp-table td {
+    color: var(--text-muted);
+    font-weight: 500;
+    cursor: default;
+  }
+  .dp-table td.T { background: rgba(74, 222, 128, 0.25); color: var(--green); font-weight: 700; }
+  .dp-table td.F { background: rgba(248, 113, 113, 0.12); color: var(--red); }
+  .dp-table td.highlight-cell {
+    transform: scale(1.15);
+    box-shadow: 0 0 16px var(--accent);
+    z-index: 2;
+    border-color: var(--accent);
+    font-weight: 800;
+  }
+  .dp-table td.lps-cell {
+    background: rgba(129, 140, 248, 0.3);
+    border-color: var(--accent2);
+    animation: pulse-lps 1s ease-in-out infinite;
+  }
+
+  @keyframes pulse-lps {
+    0%, 100% { box-shadow: 0 0 8px var(--accent2); }
+    50% { box-shadow: 0 0 22px var(--accent2); }
+  }
+
+  /* STRING VISUAL */
+  .string-viz {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 1rem 0;
+  }
+  .char-box {
+    width: 46px; height: 46px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    transition: background 0.35s, border-color 0.35s, transform 0.3s;
+    position: relative;
+  }
+  .char-box .idx {
+    position: absolute;
+    top: -20px;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .char-box.highlight-i { background: var(--accent); color: var(--bg); border-color: var(--accent); transform: scale(1.1); z-index: 1; }
+  .char-box.highlight-j { background: var(--accent2); color: var(--bg); border-color: var(--accent2); transform: scale(1.1); z-index: 1; }
+  .char-box.palindrome-inner { background: rgba(74, 222, 128, 0.2); border-color: var(--green); }
+  .char-box.palindrome-match { background: var(--green); color: var(--bg); border-color: var(--green); animation: pop-in 0.4s ease; }
+  .char-box.lps-char { background: var(--accent2); color: #fff; border-color: var(--accent2); animation: glow-lps 1.2s ease-in-out infinite; }
+
+  @keyframes pop-in {
+    0% { transform: scale(0.7); }
+    70% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  @keyframes glow-lps {
+    0%, 100% { box-shadow: 0 0 6px var(--accent2); }
+    50% { box-shadow: 0 0 18px var(--accent2); }
+  }
+
+  /* BUTTONS */
+  .btn-group { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 0.8rem 0; }
+  .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .btn:hover { background: var(--border); border-color: var(--accent); }
+  .btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .btn.accent { background: var(--accent2); border-color: var(--accent2); color: #fff; font-weight: 600; }
+  .btn.accent:hover { filter: brightness(1.15); }
+
+  /* STEP DISPLAY */
+  .step-indicator {
+    display: flex; align-items: center; gap: 0.5rem; margin: 1.2rem 0;
+    font-size: 0.9rem; color: var(--text-muted);
+  }
+  .step-indicator .step-num {
+    background: var(--accent2); color: #fff;
+    padding: 0.15rem 0.6rem; border-radius: 12px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+  .code-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.3rem;
+    margin: 1rem 0;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    white-space: pre;
+  }
+  .code-block .kw { color: #ff7b72; }
+  .code-block .fn { color: #d2a8ff; }
+  .code-block .str { color: #a5d6ff; }
+  .code-block .cm { color: #8b949e; font-style: italic; }
+  .code-block .num { color: #79c0ff; }
+  .code-block .callout { color: var(--yellow); }
+
+  /* PROGRESS */
+  .progress-bar {
+    width: 100%; height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    margin: 0.5rem 0;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  .result-box {
+    background: linear-gradient(135deg, #1a2340, #1e293b);
+    border: 2px solid var(--green);
+    border-radius: 12px;
+    padding: 1.2rem 1.6rem;
+    margin: 1.2rem 0;
+    font-size: 1.1rem;
+  }
+  .result-box .big-str { font-size: 1.8rem; font-weight: 800; color: var(--green); font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+
+  .recurrence-viz {
+    display: flex; align-items: center; gap: 0.8rem;
+    flex-wrap: wrap; justify-content: center;
+    margin: 1.2rem 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+  }
+  .recurrence-viz .cell-ref {
+    background: var(--surface2);
+    border: 2px dashed var(--accent);
+    border-radius: 8px;
+    padding: 0.4rem 0.7rem;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .recurrence-viz .arrow { color: var(--yellow); font-size: 1.2rem; }
+
+  .tip-box {
+    background: rgba(251, 146, 60, 0.1);
+    border-left: 4px solid var(--orange);
+    padding: 0.8rem 1rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+  }
+  .tip-box::before { content: '🔑 '; }
+
+  /* ===== SUBMISSIONS / COLLAPSIBLE ===== */
+  .submissions-section { margin-top: 3rem; }
+  .submission-entry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin: 1.2rem 0;
+    overflow: hidden;
+  }
+  .submission-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.4rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+  }
+  .submission-header:hover { background: var(--surface2); }
+  .submission-header .left { display: flex; align-items: center; gap: 0.8rem; }
+  .submission-header .chevron {
+    font-size: 1.2rem; transition: transform 0.3s;
+    color: var(--text-muted);
+  }
+  .submission-entry.open .submission-header .chevron { transform: rotate(90deg); }
+  .submission-header .title { font-weight: 700; font-size: 1.05rem; }
+  .badge {
+    display: inline-block;
+    padding: 0.2em 0.7em; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 700;
+  }
+  .badge.bug    { background: rgba(248,113,113,0.15); color: var(--red); }
+  .badge.fixed { background: rgba(74,222,128,0.15); color: var(--green); }
+  .badge.warn  { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .badge.info  { background: rgba(56,189,248,0.12); color: var(--accent); }
+  .submission-body {
+    display: none;
+    padding: 0 1.4rem 1.4rem;
+    border-top: 1px solid var(--border);
+  }
+  .submission-entry.open .submission-body { display: block; }
+
+  .critique-card {
+    background: rgba(248,113,113,0.06);
+    border-left: 4px solid var(--red);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.2rem;
+    margin: 1rem 0;
+  }
+  .critique-card h5 { color: var(--red); margin-bottom: 0.3rem; font-size: 0.95rem; }
+  .fix-card {
+    background: rgba(74,222,128,0.06);
+    border-left: 4px solid var(--green);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.2rem;
+    margin: 1rem 0;
+  }
+  .fix-card h5 { color: var(--green); margin-bottom: 0.3rem; font-size: 0.95rem; }
+  .score-bar {
+    display: flex; align-items: center; gap: 0.6rem;
+    margin: 0.8rem 0;
+  }
+  .score-pill {
+    background: var(--surface2);
+    border-radius: 20px;
+    padding: 0.3rem 1rem;
+    font-weight: 700; font-size: 0.9rem;
+  }
+  .score-pill.high { color: var(--green); border: 1px solid var(--green); }
+  .score-pill.med  { color: var(--yellow); border: 1px solid var(--yellow); }
+  .score-pill.low  { color: var(--red); border: 1px solid var(--red); }
+  .diff-line { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; padding: 0.15rem 0; }
+  .diff-line.add { color: var(--green); }
+  .diff-line.del { color: var(--red); text-decoration: line-through; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>
+  <span class="gradient-text">Longest Palindromic Substring</span><br>
+  <small style="font-size:1rem;font-weight:400;color:var(--text-muted)">Mastering the DP recurrence pattern</small>
+</h1>
+
+<p>We're going to build the intuition <strong>from the ground up</strong> — not just memorize the solution. By the end, you'll know how to <strong>derive the recurrence</strong> for any "optimal substring" problem.</p>
+
+<!-- ============================================================ -->
+<h2>1. What makes a palindrome?</h2>
+
+<div class="card">
+  <p>A string <code>s</code> is a <strong>palindrome</strong> if it reads the same forwards and backwards:</p>
+  <div class="string-viz" id="palindrome-demo">
+    <div class="char-box palindrome-match">r</div>
+    <div class="char-box palindrome-match">a</div>
+    <div class="char-box palindrome-match">c</div>
+    <div class="char-box palindrome-match">e</div>
+    <div class="char-box palindrome-match">c</div>
+    <div class="char-box palindrome-match">a</div>
+    <div class="char-box palindrome-match">r</div>
+  </div>
+  <p style="text-align:center;color:var(--green)">"racecar" — outer chars match, and the <strong>inside</strong> is also a palindrome.</p>
+
+  <p>This <em>is</em> the recurrence in disguise:</p>
+  <div class="concept-box">
+    <h4>The core insight</h4>
+    <p><code>s[i..j]</code> is a palindrome <strong>iff</strong>:</p>
+    <ol style="padding-left:1.5rem;color:var(--text-muted)">
+      <li><code>s[i] === s[j]</code> — the outer characters match, <strong>AND</strong></li>
+      <li><code>s[i+1 .. j-1]</code> is a palindrome — the <strong>inner substring</strong> is also a palindrome.</li>
+    </ol>
+    <p>Base cases: every single character is a palindrome. Two identical adjacent characters are a palindrome.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>2. The recurrence relation</h2>
+
+<div class="formula">
+<span style="color:var(--text-muted)">Let</span> dp[i][j] = <span style="color:var(--green)">true</span> <span style="color:var(--text-muted)">if</span> s[i..j] <span style="color:var(--text-muted)">is a palindrome</span>
+
+<span style="color:var(--accent)">dp[i][j]</span> = <span style="color:var(--yellow)">(s[i] == s[j])</span> <span style="color:var(--accent2)">&&</span> <span style="color:var(--pink)">(j - i < 2  ||  dp[i+1][j-1])</span>
+                      └─ base: length 1 or 2 ─┘   └─ recurse to inside ─┘
+</div>
+
+<p>Break this down:</p>
+<ul style="color:var(--text-muted);padding-left:1.5rem;">
+  <li><code style="color:var(--green)">j - i &lt; 2</code> covers lengths 1 (i==j) and 2 (j==i+1). No inner substring needed — just check <code>s[i]==s[j]</code>.</li>
+  <li>For length ≥ 3, we <strong>depend on</strong> the answer for a <strong>shorter</strong> substring — the classic DP hallmark.</li>
+</ul>
+
+<div class="concept-box">
+  <h4>Why this pattern is reusable</h4>
+  <p>Any problem where the answer for <code>[i..j]</code> depends on <code>[i+1..j-1]</code> follows this exact shape:</p>
+  <div class="formula">
+dp[i][j] = f( s[i], s[j], dp[i+1][j-1] )
+  </div>
+  <p>This shows up in: <strong>Palindrome Partitioning</strong>, <strong>Longest Palindromic Subsequence</strong>, <strong>Minimum Insertions to Form Palindrome</strong>, and many "interval DP" problems.</p>
+</div>
+
+<div class="tip-box">
+  The key to recognizing DP applicability: the answer for a <strong>larger interval</strong> is built from the answer for a <strong>smaller interval</strong>. You fill the DP table diagonally — by increasing substring length.
+</div>
+
+<!-- ============================================================ -->
+<h2>3. Interactive DP table walkthrough</h2>
+
+<p>Choose an example string and step through how the DP table fills:</p>
+
+<div class="btn-group" id="example-btns">
+  <button class="btn active" data-str="babad">"babad"</button>
+  <button class="btn" data-str="cbbd">"cbbd"</button>
+  <button class="btn" data-str="racecar">"racecar"</button>
+  <button class="btn" data-str="aacabdkacaa">"aacabdkacaa"</button>
+</div>
+
+<div class="card">
+  <div class="string-viz" id="string-display"></div>
+
+  <div class="step-indicator" id="step-info">
+    <span class="step-num" id="step-num">0</span>
+    <span id="step-desc">Click "Step Forward" to begin</span>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+  <div class="btn-group">
+    <button class="btn accent" id="btn-step">▶ Step Forward</button>
+    <button class="btn" id="btn-reset">↺ Reset</button>
+    <button class="btn" id="btn-auto">⟳ Auto-Play</button>
+    <button class="btn" id="btn-jump">⏩ Jump to End</button>
+  </div>
+
+  <div style="margin-top:1rem">
+    <label style="color:var(--text-muted);font-size:0.85rem;">Speed:</label>
+    <input type="range" id="speed-slider" min="0.3" max="2" step="0.1" value="0.8" style="margin-left:0.5rem;width:140px">
+    <span id="speed-label" style="color:var(--text-muted);font-size:0.8rem;margin-left:0.3rem">0.8s</span>
+  </div>
+</div>
+
+<div class="dp-table-wrapper">
+  <table class="dp-table" id="dp-table"></table>
+</div>
+
+<div class="result-box" id="result-box" style="display:none">
+  <span style="color:var(--text-muted)">Longest Palindromic Substring:</span>
+  <span class="big-str" id="lps-result"></span>
+  <span style="color:var(--text-muted);margin-left:0.5rem">(length <strong id="lps-len"></strong>)</span>
+</div>
+
+<!-- ============================================================ -->
+<h2>4. How to fill the DP table (the traversal order)</h2>
+
+<div class="card">
+  <p>You <strong>cannot</strong> fill row-by-row left-to-right, because <code>dp[i][j]</code> depends on <code>dp[i+1][j-1]</code> (the cell <em>below-left</em>).</p>
+
+  <p><strong>Strategy: Fill by substring length.</strong></p>
+
+  <div class="concept-box">
+    <h4>The diagonal traversal</h4>
+    <div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap">
+      <div style="min-width:200px">
+        <table style="border-collapse:collapse;font-family:monospace;font-size:0.8rem">
+          <tr><td style="width:30px;height:30px;border:1px solid var(--border);text-align:center;background:rgba(74,222,128,0.2)">T</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td></td><td style="width:30px;height:30px;border:1px solid var(--border);text-align:center;background:rgba(74,222,128,0.2)">T</td><td></td><td></td><td></td></tr>
+          <tr><td></td><td></td><td style="width:30px;height:30px;border:1px solid var(--border);text-align:center;background:rgba(74,222,128,0.2)">T</td><td></td><td></td></tr>
+          <tr><td></td><td></td><td></td><td style="width:30px;height:30px;border:1px solid var(--border);text-align:center;background:rgba(74,222,128,0.2)">T</td><td></td></tr>
+          <tr><td></td><td></td><td></td><td></td><td style="width:30px;height:30px;border:1px solid var(--border);text-align:center;background:rgba(74,222,128,0.2)">T</td></tr>
+        </table>
+        <p style="font-size:0.8rem;color:var(--green);margin-top:0.3rem">Pass 1: length=1 (diagonal)</p>
+      </div>
+      <div>
+        <p style="color:var(--text-muted)">Pass 2: length=2 (one off diagonal)</p>
+        <p style="color:var(--text-muted)">Pass 3: length=3 (two off diagonal)</p>
+        <p style="color:var(--text-muted)">... and so on until length=n.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block">
+<span class="cm">// Fill by length</span>
+<span class="kw">for</span> (<span class="kw">let</span> len = 1; len <= n; len++) {
+  <span class="kw">for</span> (<span class="kw">let</span> i = 0; i + len - 1 < n; i++) {
+    <span class="kw">let</span> j = i + len - 1;
+    <span class="cm">// When filling [i][j], dp[i+1][j-1] is already computed</span>
+    <span class="cm">// because i+1..j-1 has length len-2 < len</span>
+  }
+}
+  </div>
+
+  <div class="tip-box">
+    This "diagonal fill" pattern is universal for interval DP. Whenever <code>dp[i][j]</code> depends on a <strong>strictly shorter</strong> interval, iterating by length guarantees correct dependency order.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>5. The complete solution</h2>
+
+<div class="code-block">
+<span class="cm">/**
+ * Longest Palindromic Substring — DP O(n²) time, O(n²) space
+ * Pattern: Interval DP with dp[i][j] = (s[i]==s[j]) && (len<3 || dp[i+1][j-1])
+ */</span>
+<span class="kw">function</span> <span class="fn">longestPalindrome</span>(s) {
+  <span class="kw">const</span> n = s.length;
+  <span class="kw">const</span> dp = Array.from({ length: n }, () => <span class="kw">new</span> Array(n).fill(<span class="kw">false</span>));
+  <span class="kw">let</span> start = <span class="num">0</span>, maxLen = <span class="num">1</span>;
+
+  <span class="cm">// Base: every single char is a palindrome</span>
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i < n; i++) dp[i][i] = <span class="kw">true</span>;
+
+  <span class="cm">// Fill by increasing substring length</span>
+  <span class="kw">for</span> (<span class="kw">let</span> len = <span class="num">2</span>; len <= n; len++) {
+    <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i + len - <span class="num">1</span> < n; i++) {
+      <span class="kw">const</span> j = i + len - <span class="num">1</span>;
+
+      <span class="kw">if</span> (s[i] !== s[j]) {
+        dp[i][j] = <span class="kw">false</span>;     <span class="cm">// Mismatch → not a palindrome</span>
+      } <span class="kw">else</span> <span class="kw">if</span> (len <= <span class="num">3</span>) {
+        dp[i][j] = <span class="kw">true</span>;      <span class="cm">// Length 2 or 3 with matching ends</span>
+      } <span class="kw">else</span> {
+        dp[i][j] = dp[i+<span class="num">1</span>][j-<span class="num">1</span>]; <span class="cm">// Recurrence: check inner substring</span>
+      }
+
+      <span class="kw">if</span> (dp[i][j] && len > maxLen) {
+        start = i;
+        maxLen = len;
+      }
+    }
+  }
+
+  <span class="kw">return</span> s.substring(start, start + maxLen);
+}
+</div>
+
+<div class="tip-box">
+  <strong>Space optimization:</strong> Since <code>dp[i][j]</code> only depends on row <code>i+1</code>, you can reduce to <code>O(n)</code> space with two rows. But for learning, the full table is clearer.
+</div>
+
+<!-- ============================================================ -->
+<h2>6. Recognizing this pattern in other problems</h2>
+
+<div class="card">
+  <table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+    <thead>
+      <tr style="text-align:left">
+        <th style="padding:0.5rem;border-bottom:2px solid var(--border);color:var(--accent)">Problem</th>
+        <th style="padding:0.5rem;border-bottom:2px solid var(--border);color:var(--accent)">Recurrence</th>
+        <th style="padding:0.5rem;border-bottom:2px solid var(--border);color:var(--accent)">Traversal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Longest Palindromic Substring</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>dp[i][j] = s[i]==s[j] && dp[i+1][j-1]</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">By length</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Longest Palindromic Subsequence</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>dp[i][j] = s[i]==s[j] ? 2+dp[i+1][j-1] : max(dp[i+1][j], dp[i][j-1])</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">By length</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Palindrome Partitioning II (min cuts)</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Use palindrome DP table + min-cut DP</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">By length</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Stone Game / Burst Balloons</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>dp[i][j] = max(dp[i][k] + dp[k][j] + ...)</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">By length</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="margin-top:0.8rem;color:var(--text-muted)">The common thread: <strong>interval DP</strong> — the answer for <code>[i..j]</code> splits into smaller intervals. Always fill by increasing length.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2>7. Submissions <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400">— click to expand</span></h2>
+
+<div class="submissions-section">
+
+  <!-- ===== SUBMISSION 1 ===== -->
+  <div class="submission-entry" id="submission-1">
+    <div class="submission-header" onclick="toggleSubmission('submission-1')">
+      <div class="left">
+        <span class="chevron">▶</span>
+        <span class="title">Submission #1 — Hash-map DP (first attempt)</span>
+        <span class="badge bug">4 bugs</span>
+        <span class="badge warn">6 issues</span>
+      </div>
+      <span style="color:var(--text-muted);font-size:0.8rem">Click to expand</span>
+    </div>
+    <div class="submission-body">
+
+      <!-- ORIGINAL CODE -->
+      <h4 style="color:var(--text-muted);margin-top:0.8rem">Your submitted code:</h4>
+      <div class="code-block">
+<span class="kw">class</span> <span class="fn">Solution</span>:
+
+    <span class="kw">def</span> <span class="fn">hash_array_set</span>(<span class="kw">self</span>, dp: dict[<span class="kw">int</span>, <span class="kw">int</span>], i: <span class="kw">str</span>, j: <span class="kw">str</span>, val: <span class="kw">bool</span>):
+        <span class="cm">"""Allows lookup in a hash array like an array in python"""</span>
+        <span class="kw">try</span>:
+            <span class="kw">assert</span> dp[i]
+        <span class="kw">except</span> <span class="fn">KeyError</span>:
+            dp[i] = {}
+
+        <span class="kw">try</span>:
+            <span class="kw">assert</span> dp[i][j]
+        <span class="kw">except</span> <span class="fn">KeyError</span>:
+            dp[i][j] = <span class="kw">False</span>
+
+        dp[i][j] = val
+
+    <span class="kw">def</span> <span class="fn">hash_array_get</span>(<span class="kw">self</span>, dp: dict[<span class="kw">int</span>, <span class="kw">int</span>], i: <span class="kw">str</span>, j: <span class="kw">str</span>, val: <span class="kw">bool</span>):
+        <span class="kw">try</span>:
+            <span class="kw">return</span> dp[i][j]
+        <span class="kw">except</span> <span class="fn">KeyError</span>:
+            <span class="kw">return</span> <span class="kw">False</span>
+
+    <span class="kw">def</span> <span class="fn">longestPalindrome</span>(<span class="kw">self</span>, s: <span class="kw">str</span>) -> <span class="kw">str</span>:
+
+        <span class="kw">if</span> <span class="fn">len</span>(s) < <span class="num">1</span>:
+            <span class="kw">return</span> <span class="str">'0'</span>
+
+        dp = {}
+        longest_palindrome = <span class="str">''</span>
+
+        <span class="callout"># Length 2</span>
+        <span class="kw">for</span> idx <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(s) - <span class="num">1</span>):
+            i, j = idx, idx+<span class="num">1</span>
+            <span class="kw">if</span> s[i] == s[j]:
+                longest_palindrome = s[i:j+<span class="num">1</span>]
+            <span class="kw">self</span>.hash_array_set(dp, i, j, s[i] == s[j])
+
+        <span class="callout"># Length 3</span>
+        <span class="kw">for</span> idx <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(s) - <span class="num">2</span>):
+            i, j = idx, idx + <span class="num">2</span>
+            <span class="kw">if</span> s[i] == s[j]:
+                longest_palindrome = s[i:j+<span class="num">1</span>]
+            <span class="kw">self</span>.hash_array_set(dp, i, j, s[i] == s[j])
+
+        <span class="callout"># Length 4+</span>
+        <span class="kw">for</span> str_len <span class="kw">in</span> <span class="fn">range</span>(<span class="num">4</span>, <span class="fn">len</span>(s)):          <span class="callout">← BUG #1: off-by-one</span>
+            <span class="kw">for</span> idx <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(s) - str_len):
+                i, j = idx, idx + str_len            <span class="callout">← BUG #4: j should be idx + str_len - 1</span>
+                <span class="kw">if</span> s[i] == s[j] <span class="kw">and</span> <span class="fn">hash_array_get</span>(dp, i+<span class="num">1</span>, j-<span class="num">1</span>):  <span class="callout">← BUG #3: missing self.</span>
+                    longest_palindrom = s[i:j+<span class="num">1</span>]   <span class="callout">← BUG #2: typo (missing 'e')</span>
+                    <span class="kw">break</span>
+
+        <span class="kw">return</span> longest_palindrome
+      </div>
+
+      <!-- INTERVIEWER VERDICT -->
+      <div class="score-bar" style="margin-top:1.2rem">
+        <span style="font-weight:700;color:var(--text)">Interviewer verdict:</span>
+        <span class="score-pill low">Would not pass</span>
+        <span style="color:var(--text-muted);font-size:0.85rem">4 bugs (1 logical, 3 mechanical) + design concerns</span>
+      </div>
+
+      <!-- BUG-BY-BUG -->
+      <h3 style="color:var(--red);margin-top:1.5rem">🔴 Blocking Bugs</h3>
+
+      <div class="critique-card">
+        <h5>Bug #1 — Off-by-one in the outer loop <span class="badge bug">BLOCKING</span></h5>
+        <p><code>range(4, len(s))</code> stops at <code>len(s)-1</code>, so you <strong>never check the full string</strong>. For <code>"babad"</code> (len=5), you only check <code>str_len=4</code>. The substring <code>"babad"</code> itself is never evaluated. If the longest palindrome <em>is</em> the whole string, your code returns the wrong answer.</p>
+        <div class="fix-card">
+          <h5>Fix:</h5>
+          <code>range(4, len(s) + 1)</code>
+        </div>
+      </div>
+
+      <div class="critique-card">
+        <h5>Bug #2 — Variable name typo: <code>longest_palindrom</code> <span class="badge bug">BLOCKING</span></h5>
+        <p>Inside the length≥4 loop, you write to <code>longest_palindrom</code> (missing an 'e'). This creates a <strong>new local variable</strong> — it never updates <code>longest_palindrome</code>. The function always returns whatever was found in the length-2 or length-3 passes. For any string where the longest palindrome has length ≥ 4, the result is wrong.</p>
+        <p style="color:var(--yellow);margin-top:0.4rem">⚠️ This is the kind of bug that's <em>very</em> hard to spot in an interview because your brain autocorrects the spelling.</p>
+      </div>
+
+      <div class="critique-card">
+        <h5>Bug #3 — Missing <code>self.</code> on <code>hash_array_get</code> <span class="badge bug">BLOCKING</span></h5>
+        <p>Inside the length≥4 loop you call <code>hash_array_get(dp, i+1, j-1)</code> without <code>self.</code>. This will throw a <code>NameError</code> at runtime — the function is never defined in local or global scope.</p>
+      </div>
+
+      <div class="critique-card">
+        <h5>Bug #4 — Wrong <code>j</code> calculation: <code>j = idx + str_len</code> <span class="badge bug">BLOCKING</span></h5>
+        <p>This is the <strong>only logic-level bug</strong> — and it's subtle. Look at lengths 2 and 3:</p>
+        <ul style="padding-left:1.5rem;color:var(--text-muted);margin-top:0.3rem">
+          <li>Length 2 loop: you use <code>j = idx + 1</code> — and <code>s[i:j+1]</code> slices 2 chars. ✓</li>
+          <li>Length 3 loop: you use <code>j = idx + 2</code> — and <code>s[i:j+1]</code> slices 3 chars. ✓</li>
+        </ul>
+        <p>But in the generalized loop, <code>j = idx + str_len</code> gives a substring of length <strong><code>str_len + 1</code></strong>, not <code>str_len</code>. For <code>str_len=4</code>, you're checking substrings of length 5. The <code>range(len(s) - str_len)</code> compensates by shrinking the loop range, but the two errors partially mask each other — until they don't.</p>
+        <p style="margin-top:0.5rem"><strong>Counterexample:</strong> <code>"abba"</code> — the whole string is a palindrome. But:</p>
+        <div class="code-block" style="font-size:0.8rem">
+<span class="cm">n=4, str_len=4:  range(4-4) = range(0) → empty loop</span>
+<span class="cm">The full string is never checked. Result: "bb" ← WRONG</span>
+        </div>
+        <div class="fix-card">
+          <h5>Fix:</h5>
+          <code>j = idx + str_len - 1</code>  (so the substring <code>s[i:j+1]</code> has exactly <code>str_len</code> characters)
+        </div>
+      </div>
+
+      <!-- DESIGN ISSUES -->
+      <h3 style="color:var(--yellow);margin-top:1.5rem">🟡 Design / Code Quality Issues</h3>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #4 — Edge case returns wrong sentinel</h5>
+        <p><code>if len(s) &lt; 1: return '0'</code> — the character <code>'0'</code> is a valid English letter/digit and could appear in the input. An empty string should return <code>""</code>. Returning <code>'0'</code> is misleading and would fail test cases where the input is empty (though constraints say len≥1, it's sloppy).</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #5 — No base case for length 1</h5>
+        <p>You never initialize <code>dp[i][i] = True</code>. The code works around this by special-casing lengths 2 and 3, but this is fragile. If you later refactored to unify the loops, the recurrence <code>dp[i+1][j-1]</code> would fail for substrings where the inner portion is length 1 (because <code>hash_array_get</code> returns <code>False</code> for unset keys).</p>
+        <p style="color:var(--text-muted);margin-top:0.3rem">Missing base cases = missing the foundation of DP. The interviewer wants to see you explicitly set up the base.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #6 — Unnecessary special-casing of lengths 2 and 3</h5>
+        <p>You have three separate loops (len=2, len=3, len≥4) when the general recurrence handles all of them. Length 2 (<code>j-i+1=2</code>): the inner substring <code>dp[i+1][j-1]</code> doesn't exist (i+1 > j-1), so the recurrence needs a guard. Length 3: the inner substring is length 1, which is always a palindrome, so <code>s[i]==s[j]</code> suffices. But all this collapses into one loop with the <code>len &lt;= 3</code> guard — exactly what the canonical solution does.</p>
+        <div class="fix-card">
+          <h5>The unified approach:</h5>
+          <code>if s[i] == s[j] and (len &lt;= 3 or dp[i+1][j-1])</code>
+        </div>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #7 — Anti-pattern: <code>try/except assert</code> for dict defaults</h5>
+        <p><code>hash_array_set</code> uses <code>assert dp[i]</code> inside a try/except to detect missing keys. This is non-idiomatic and confusing:</p>
+        <ul style="padding-left:1.5rem;color:var(--text-muted);margin-top:0.3rem">
+          <li><code>assert</code> can be disabled with <code>python -O</code>, silently breaking the code</li>
+          <li>The idiomatic way is <code>dp.setdefault(i, {})</code> or <code>if i not in dp: dp[i] = {}</code></li>
+          <li><code>hash_array_get</code> has an unused parameter <code>val</code> — dead code</li>
+        </ul>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #8 — Type hints are wrong</h5>
+        <p><code>dict[int, int]</code> suggests values are <code>int</code>, but you're storing nested dicts of bools. The correct hint is <code>dict[int, dict[int, bool]]</code>. Wrong type hints signal to the interviewer that you're not thinking about the data structure's shape.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #9 — Sparse hash-map buys nothing here</h5>
+        <p>The idea of using a hash-map to "avoid storing all the data" is premature optimization. For n≤1000, an <code>n×n</code> list-of-lists uses ~8MB for booleans — negligible. The hash-map approach adds overhead (hashing, collisions), makes traversal harder, and doesn't reduce asymptotic complexity. The <strong>real</strong> space optimization is the two-row rolling array that drops O(n²)→O(n).</p>
+      </div>
+
+      <!-- THE FIX -->
+      <h3 style="color:var(--green);margin-top:1.5rem">🟢 Fixed & Improved Solution</h3>
+
+      <div class="fix-card">
+        <h5>What changed and why:</h5>
+        <ul style="padding-left:1.5rem;color:var(--text-muted)">
+          <li><strong>Single unified loop</strong> — one <code>for len in range(2, n+1)</code> replaces three ad-hoc loops</li>
+          <li><strong>Explicit base case</strong> — <code>dp[i][i] = True</code> is initialized up front</li>
+          <li><strong>Proper 2D list</strong> — <code>[[False]*n for _ in range(n)]</code> is simpler, faster, and idiomatic</li>
+          <li><strong>Variable name consistency</strong> — no typos, single source of truth for the longest palindrome</li>
+          <li><strong>Correct edge case</strong> — returns <code>""</code> for empty input, <code>s[0]</code> for single-char input</li>
+        </ul>
+      </div>
+
+      <div class="code-block">
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">longestPalindrome</span>(<span class="kw">self</span>, s: <span class="kw">str</span>) -> <span class="kw">str</span>:
+        n = <span class="fn">len</span>(s)
+        <span class="kw">if</span> n == <span class="num">0</span>:
+            <span class="kw">return</span> <span class="str">""</span>
+
+        <span class="cm"># dp[i][j] = True  ⇔  s[i..j] is a palindrome</span>
+        dp = [[<span class="kw">False</span>] * n <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(n)]
+
+        start = <span class="num">0</span>
+        max_len = <span class="num">1</span>
+
+        <span class="cm"># Base case: every single character is a palindrome</span>
+        <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n):
+            dp[i][i] = <span class="kw">True</span>
+
+        <span class="cm"># Fill by increasing substring length</span>
+        <span class="kw">for</span> length <span class="kw">in</span> <span class="fn">range</span>(<span class="num">2</span>, n + <span class="num">1</span>):
+            <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n - length + <span class="num">1</span>):
+                j = i + length - <span class="num">1</span>
+
+                <span class="kw">if</span> s[i] != s[j]:
+                    dp[i][j] = <span class="kw">False</span>
+                <span class="kw">elif</span> length <= <span class="num">3</span>:
+                    <span class="cm"># length 2: two identical chars → palindrome</span>
+                    <span class="cm"># length 3: s[i]==s[j] → palindrome (middle doesn't matter)</span>
+                    dp[i][j] = <span class="kw">True</span>
+                <span class="kw">else</span>:
+                    <span class="cm"># Recurrence: outer match + inner palindrome</span>
+                    dp[i][j] = dp[i + <span class="num">1</span>][j - <span class="num">1</span>]
+
+                <span class="kw">if</span> dp[i][j] <span class="kw">and</span> length > max_len:
+                    start = i
+                    max_len = length
+
+        <span class="kw">return</span> s[start:start + max_len]
+      </div>
+
+      <h3 style="color:var(--accent);margin-top:1.5rem">🎯 Key Takeaway</h3>
+      <div class="concept-box">
+        <p style="color:var(--text-muted)"><strong>You understood the recurrence perfectly — this is the hard part.</strong> The intuition that <code>dp[i][j] = s[i]==s[j] and dp[i+1][j-1]</code> and that you fill by increasing length is exactly right. The hash-map idea shows you're thinking about space. The separate handling of base lengths shows correct DP thinking.</p>
+        <p style="color:var(--text-muted);margin-top:0.5rem"><strong>However, three of the four bugs come from translating the recurrence into loop indices.</strong> Bug #4 is especially instructive — you correctly derived <code>j = idx+1</code> for length 2 and <code>j = idx+2</code> for length 3 (both are <code>idx + (length - 1)</code>), but wrote <code>j = idx + str_len</code> in the generalized loop (should be <code>idx + str_len - 1</code>). This is a classic off-by-one that happens when you generalize from concrete cases without verifying the formula.</p>
+        <ul style="padding-left:1.5rem;color:var(--text-muted);margin-top:0.5rem">
+          <li><strong>Derive indices from first principles:</strong> write <code>j = i + length - 1</code> explicitly — don't guess from the small-case pattern</li>
+          <li><strong>Test your code mentally</strong> on short inputs like <code>"abba"</code> — it exposes index errors the fastest</li>
+          <li><strong>Unify, don't multiply:</strong> three loops hint that one loop could replace them, which would have forced you to get the index formula right</li>
+          <li><strong>Check your variable names</strong> — a typo that creates a new variable is a silent killer in Python (no compiler to catch it)</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SUBMISSION 2 ===== -->
+  <div class="submission-entry" id="submission-2">
+    <div class="submission-header" onclick="toggleSubmission('submission-2')">
+      <div class="left">
+        <span class="chevron">▶</span>
+        <span class="title">Submission #2 — Unified loop (second attempt)</span>
+        <span class="badge bug">3 bugs</span>
+        <span class="badge warn">5 issues</span>
+      </div>
+      <span style="color:var(--text-muted);font-size:0.8rem">Click to expand</span>
+    </div>
+    <div class="submission-body">
+
+      <div class="score-bar">
+        <span style="font-weight:700;color:var(--text)">Progress from #1:</span>
+        <span class="score-pill med">Improved</span>
+        <span style="color:var(--text-muted);font-size:0.85rem">Fixed 3 of 4 bugs + 2 issues, but introduced new logical errors</span>
+      </div>
+
+      <p style="color:var(--text-muted);margin-top:0.5rem">
+        <strong>What you fixed:</strong> ✅ unified three loops into one, ✅ added length-1 base case, ✅ fixed typo, ✅ fixed return sentinel, ✅ fixed type hints. <strong>What went wrong:</strong> the <code>j</code> calculation still has the off-by-one, the recurrence references <code>dp[i][j]</code> instead of <code>dp[i+1][j-1]</code>, and the <code>str_len &lt;= 3</code> guard now fires for the wrong lengths.
+      </p>
+
+      <h4 style="color:var(--text-muted);margin-top:0.8rem">Your submitted code:</h4>
+      <div class="code-block">
+<span class="kw">class</span> <span class="fn">Solution</span>:
+
+    <span class="kw">def</span> <span class="fn">hash_array_set</span>(<span class="kw">self</span>, dp: dict[<span class="kw">int</span>, dict[<span class="kw">int</span>, <span class="kw">bool</span>]], i: <span class="kw">str</span>, j: <span class="kw">str</span>, val: <span class="kw">bool</span>):
+        <span class="kw">try</span>:
+            <span class="kw">assert</span> dp[i]
+        <span class="kw">except</span> <span class="fn">KeyError</span>:
+            dp[i] = {}
+        <span class="kw">try</span>:
+            <span class="kw">assert</span> dp[i][j]
+        <span class="kw">except</span> <span class="fn">KeyError</span>:
+            dp[i][j] = <span class="kw">False</span>
+        dp[i][j] = val
+
+    <span class="kw">def</span> <span class="fn">longestPalindrome</span>(<span class="kw">self</span>, s: <span class="kw">str</span>) -> <span class="kw">str</span>:
+        <span class="kw">if</span> <span class="fn">len</span>(s) < <span class="num">1</span>:           <span class="callout">✅ fixed: returns '' instead of '0'</span>
+            <span class="kw">return</span> <span class="str">''</span>
+
+        dp = {}
+        longest_palindrome = <span class="str">''</span>
+
+        <span class="cm"># ✅ fixed: base case for length 1</span>
+        <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(s)):
+            <span class="kw">self</span>.hash_array_set(dp, i, i, <span class="kw">True</span>)
+
+        <span class="cm"># ✅ unified loop replaces three separate loops</span>
+        <span class="kw">for</span> str_len <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(s) + <span class="num">1</span>):
+            <span class="kw">for</span> idx <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(s) - str_len):
+                i, j = idx, idx + str_len            <span class="callout">← BUG #1: j = idx + str_len (same Bug #4 from submission 1)</span>
+                is_pal = (s[i] == s[j]) <span class="kw">and</span> (str_len <= <span class="num">3</span> <span class="kw">or</span> dp[i][j])  <span class="callout">← BUG #2: dp[i][j] should be dp[i+1][j-1]</span>
+                                                                             <span class="callout">← BUG #3: str_len<=3 guard fires for wrong actual lengths</span>
+                <span class="kw">if</span> is_pal:
+                    longest_palindrome = s[i:j+<span class="num">1</span>]   <span class="callout">← Issue: no length check, overwrites blindly</span>
+                <span class="kw">self</span>.hash_array_set(dp, i, j, is_pal)
+
+        <span class="kw">return</span> longest_palindrome
+      </div>
+
+      <!-- BUG BY BUG -->
+      <h3 style="color:var(--red);margin-top:1.5rem">🔴 Blocking Bugs</h3>
+
+      <div class="critique-card">
+        <h5>Bug #1 — Same <code>j = idx + str_len</code> off-by-one from submission 1 <span class="badge bug">BLOCKING</span></h5>
+        <p>You renamed the variable to <code>str_len</code> but it still isn't the substring length — it's <code>j - idx</code> which equals <strong><code>length - 1</code></strong>. When you write <code>for str_len in range(n+1)</code>, you iterate over <code>0, 1, 2, ..., n</code>, but:
+        </p>
+        <ul style="padding-left:1.5rem;color:var(--text-muted);margin-top:0.3rem">
+          <li><code>str_len=0</code> → <code>j=idx</code>, actual substring length = 1 (redundant with base case)</li>
+          <li><code>str_len=1</code> → <code>j=idx+1</code>, actual substring length = 2</li>
+          <li><code>str_len=2</code> → <code>j=idx+2</code>, actual substring length = 3</li>
+          <li><code>str_len=3</code> → <code>j=idx+3</code>, actual substring length = <strong>4</strong></li>
+        </ul>
+        <p>This alone isn't fatal — but it sets up Bug #3 to be catastrophic.</p>
+        <div class="fix-card">
+          <h5>Fix:</h5>
+          <code>j = idx + length - 1</code> and iterate <code>for length in range(2, n+1)</code>
+        </div>
+      </div>
+
+      <div class="critique-card">
+        <h5>Bug #2 — Recurrence checks <code>dp[i][j]</code> instead of <code>dp[i+1][j-1]</code> <span class="badge bug">BLOCKING</span></h5>
+        <p>This is the most serious error. Your recurrence says:</p>
+        <div class="code-block" style="font-size:0.82rem">
+is_pal = (s[i] == s[j]) and (str_len <= 3 or <span style="color:var(--red);font-weight:700">dp[i][j]</span>)  <span class="cm">← checks ITSELF!</span>
+<span class="cm">Should be:</span>
+is_pal = (s[i] == s[j]) and (len <= 3 or <span style="color:var(--green);font-weight:700">dp[i+1][j-1]</span>)  <span class="cm">← checks inner substring</span>
+        </div>
+        <p><code>dp[i][j]</code> is the cell you're currently computing — it hasn't been set yet (or is <code>False</code> from the hash-map default). For any substring where <code>str_len > 3</code> (actual length ≥ 5), this always evaluates to <code>False</code>, making every palindrome of length ≥ 5 invisible to the algorithm.</p>
+        <p style="color:var(--yellow);margin-top:0.4rem">Counterexample: <code>"abcba"</code> (length 5). The code checks <code>dp[0][4]</code> which is unset → <code>False</code>. Result: <code>"bcb"</code> instead of <code>"abcba"</code>.</p>
+      </div>
+
+      <div class="critique-card">
+        <h5>Bug #3 — <code>str_len &lt;= 3</code> guard fires for wrong actual lengths <span class="badge bug">BLOCKING</span></h5>
+        <p>Because <code>str_len</code> is really <code>length - 1</code>, the guard <code>str_len &lt;= 3</code> corresponds to actual substring lengths 2, 3, and <strong>4</strong>. This means every length-4 substring with matching outer characters is treated as a palindrome <em>without</em> checking the inner pair — even when the inner pair mismatches.</p>
+        <p style="color:var(--yellow);margin-top:0.4rem">Counterexample: <code>"abca"</code> (n=4, str_len=3): <code>s[0]==s[3]</code> and <code>3 &lt;= 3</code> → <code>True</code>. Result: <code>"abca"</code> reported as palindrome — it's not.</p>
+        <p style="margin-top:0.5rem"><strong>The double hit:</strong> Bug #2 kills all palindromes of length ≥ 5 (false negatives). Bug #3 creates false palindromes at exactly length 4 (false positives). The bugs partially mask each other when they shouldn't.</p>
+      </div>
+
+      <!-- DESIGN ISSUES -->
+      <h3 style="color:var(--yellow);margin-top:1.5rem">🟡 Design / Code Quality Issues</h3>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #4 — Overwrites <code>longest_palindrome</code> without checking length</h5>
+        <p>Every time <code>is_pal</code> is <code>True</code>, you blindly overwrite <code>longest_palindrome</code> regardless of whether the new palindrome is actually longer. This works only because <code>str_len</code> increases monotonically (so later palindromes happen to be longer). If the loop order ever changed, or if a shorter palindrome is checked after a longer one within the same iteration, the result would be wrong. A <code>if len(cand) > len(longest_palindrome)</code> guard costs nothing and documents intent.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #5 — <code>range(len(s) + 1)</code> includes <code>str_len=0</code></h5>
+        <p><code>str_len=0</code> re-checks every single-character substring that was already handled by the base case. It's redundant and makes the loop harder to reason about. A cleaner range: <code>for length in range(2, n+1)</code>.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #6 — Same <code>try/except assert</code> anti-pattern</h5>
+        <p>Unchanged from submission #1. <code>assert</code> inside <code>try/except</code> to detect missing dict keys remains non-idiomatic and breaks with <code>python -O</code>.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #7 — <code>hash_array_get</code> still has unused <code>val</code> parameter</h5>
+        <p>And this function is no longer even called — you inlined the lookup with <code>dp[i][j]</code> (which is itself the bug). Dead code signals incomplete refactoring.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #8 — Hash-map approach still adds complexity without benefit</h5>
+        <p>Same concern as submission #1. A 2D list is simpler, faster, and makes indexing mistakes like <code>dp[i][j]</code> vs <code>dp[i+1][j-1]</code> more visually obvious.</p>
+      </div>
+
+      <!-- THE FIX -->
+      <h3 style="color:var(--green);margin-top:1.5rem">🟢 How to Fix (minimal changes to preserve your approach)</h3>
+
+      <div class="fix-card">
+        <h5>Three targeted fixes:</h5>
+        <ol style="padding-left:1.5rem;color:var(--text-muted)">
+          <li><strong>Rename and re-range:</strong> iterate <code>for length in range(2, n+1)</code> and set <code>j = idx + length - 1</code></li>
+          <li><strong>Fix the recurrence:</strong> <code>dp[i+1][j-1]</code> not <code>dp[i][j]</code></li>
+          <li><strong>Adjust the guard:</strong> <code>length &lt;= 3</code> (now uses the correct variable)</li>
+        </ol>
+      </div>
+
+      <div class="code-block">
+<span class="cm"># Minimally-fixed version of your approach</span>
+<span class="kw">def</span> <span class="fn">longestPalindrome</span>(<span class="kw">self</span>, s: <span class="kw">str</span>) -> <span class="kw">str</span>:
+    n = <span class="fn">len</span>(s)
+    <span class="kw">if</span> n == <span class="num">0</span>:
+        <span class="kw">return</span> <span class="str">""</span>
+
+    dp = {}
+    start, max_len = <span class="num">0</span>, <span class="num">1</span>
+
+    <span class="cm"># Base: single chars</span>
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n):
+        dp.setdefault(i, {})[i] = <span class="kw">True</span>
+
+    <span class="cm"># Fill by actual substring length (not j-idx)</span>
+    <span class="kw">for</span> length <span class="kw">in</span> <span class="fn">range</span>(<span class="num">2</span>, n + <span class="num">1</span>):
+        <span class="kw">for</span> idx <span class="kw">in</span> <span class="fn">range</span>(n - length + <span class="num">1</span>):
+            i, j = idx, idx + length - <span class="num">1</span>          <span class="cm"># ← j = i + (length - 1)</span>
+
+            <span class="kw">if</span> s[i] != s[j]:
+                dp.setdefault(i, {})[j] = <span class="kw">False</span>
+            <span class="kw">elif</span> length <= <span class="num">3</span>:                          <span class="cm"># ← now uses 'length', not 'str_len'</span>
+                dp.setdefault(i, {})[j] = <span class="kw">True</span>
+            <span class="kw">else</span>:
+                inner = dp.get(i + <span class="num">1</span>, {}).get(j - <span class="num">1</span>, <span class="kw">False</span>)  <span class="cm"># ← dp[i+1][j-1], NOT dp[i][j]</span>
+                dp.setdefault(i, {})[j] = inner
+
+            <span class="kw">if</span> dp.get(i, {}).get(j, <span class="kw">False</span>) <span class="kw">and</span> length > max_len:
+                start = idx
+                max_len = length
+
+    <span class="kw">return</span> s[start:start + max_len]
+      </div>
+
+      <div class="concept-box" style="margin-top:1.2rem">
+        <h4>🎯 The pattern you're fighting</h4>
+        <p style="color:var(--text-muted)">You keep hitting the same wall: <strong>translating "by increasing length" into correct loop indices.</strong> Both submissions have the recurrence right in your head (<code>s[i]==s[j] and inner is palindrome</code>), but the code writes <code>dp[i][j]</code> when it means <code>dp[i+1][j-1]</code>, and the loop variable confuses "length" with "j - idx".</p>
+        <p style="color:var(--text-muted);margin-top:0.4rem"><strong>Concrete habit:</strong> Before writing the loop, write this invariant on a comment line:</p>
+        <div class="code-block">
+<span class="cm"># INVARIANT: j - i + 1 == length   (substring has exactly 'length' chars)</span>
+<span class="cm"># Therefore: j = i + length - 1</span>
+        </div>
+        <p style="color:var(--text-muted)">And triple-check that every recurrence reference is to a <strong>strictly shorter</strong> interval: <code>dp[i+1][j-1]</code> in this problem, <code>dp[i+1][j]</code> or <code>dp[i][j-1]</code> in others.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SUBMISSION 3 ===== -->
+  <div class="submission-entry" id="submission-3">
+    <div class="submission-header" onclick="toggleSubmission('submission-3')">
+      <div class="left">
+        <span class="chevron">▶</span>
+        <span class="title">Submission #3 — Range tweak (third attempt)</span>
+        <span class="badge bug">5 bugs</span>
+        <span class="badge warn">2 issues</span>
+      </div>
+      <span style="color:var(--text-muted);font-size:0.8rem">Click to expand</span>
+    </div>
+    <div class="submission-body">
+
+      <div class="score-bar">
+        <span style="font-weight:700;color:var(--text)">Verdict:</span>
+        <span class="score-pill low">Crashes on every non-trivial input</span>
+        <span style="color:var(--text-muted);font-size:0.85rem">The range "fix" inverted the bug — now IndexError instead of wrong answer</span>
+      </div>
+
+      <p style="color:var(--text-muted);margin-top:0.5rem">
+        <strong>What you changed from #2:</strong> loop now starts at <code>range(2, n+1)</code> (skipping str_len=0,1) and <code>range(n - str_len + 1)</code> (attempting to fix the off-by-one). Neither addresses the root cause, and the +1 introduces an out-of-bounds crash on every non-trivial input.
+      </p>
+
+      <h4 style="color:var(--text-muted);margin-top:0.8rem">Your code:</h4>
+      <div class="code-block">
+<span class="cm"># Base case (unchanged)</span>
+<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(s)):
+    <span class="kw">self</span>.hash_array_set(dp, i, i, <span class="kw">True</span>)
+
+<span class="kw">for</span> str_len <span class="kw">in</span> <span class="fn">range</span>(<span class="num">2</span>, <span class="fn">len</span>(s) + <span class="num">1</span>):              <span class="callout">← BUG A: starts at 2 → skips actual length 2</span>
+    <span class="kw">for</span> idx <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(s) - str_len + <span class="num">1</span>):    <span class="callout">← BUG B: +1 → last idx gives j = len(s) → IndexError</span>
+        i, j = idx, idx + str_len                  <span class="callout">← BUG C: j = idx+str_len (not length-1)</span>
+        is_pal = (s[i] == s[j]) <span class="kw">and</span> (str_len <= <span class="num">3</span> <span class="kw">or</span> dp[i][j])  <span class="callout">← BUG D: dp[i][j] → should be dp[i+1][j-1]</span>
+                                                     <span class="callout">← BUG E: str_len<=3 fires for wrong actual lengths</span>
+        <span class="kw">if</span> is_pal:
+            longest_palindrome = s[i:j+<span class="num">1</span>]
+        <span class="kw">self</span>.hash_array_set(dp, i, j, is_pal)
+
+<span class="kw">return</span> longest_palindrome
+      </div>
+
+      <h3 style="color:var(--red);margin-top:1.5rem">🔴 Blocking Bugs</h3>
+
+      <div class="critique-card">
+        <h5>Bug A — <code>range(2, n+1)</code> skips all length-2 substrings <span class="badge bug">BLOCKING</span></h5>
+        <p>Your <code>str_len</code> variable is really <code>j - idx</code>, which equals <strong><code>actual_length - 1</code></strong>:</p>
+        <table style="border-collapse:collapse;font-size:0.85rem;margin:0.5rem 0">
+          <tr><td style="padding:0.25rem 0.8rem;border:1px solid var(--border)">str_len=0</td><td style="padding:0.25rem 0.8rem;border:1px solid var(--border)">→</td><td style="padding:0.25rem 0.8rem;border:1px solid var(--border)">actual length 1 (handled by base case)</td></tr>
+          <tr><td style="padding:0.25rem 0.8rem;border:1px solid var(--border);background:rgba(248,113,113,0.1)">str_len=1</td><td style="padding:0.25rem 0.8rem;border:1px solid var(--border);background:rgba(248,113,113,0.1)">→</td><td style="padding:0.25rem 0.8rem;border:1px solid var(--border);background:rgba(248,113,113,0.1)">actual length 2 ← <strong>MISSING!</strong></td></tr>
+          <tr><td style="padding:0.25rem 0.8rem;border:1px solid var(--border)">str_len=2</td><td style="padding:0.25rem 0.8rem;border:1px solid var(--border)">→</td><td style="padding:0.25rem 0.8rem;border:1px solid var(--border)">actual length 3 (first loop iteration)</td></tr>
+        </table>
+        <p style="margin-top:0.5rem"><code>"cbbd"</code> (whose only palindrome is <code>"bb"</code>, length 2) would return <code>""</code> — <em>if it didn't crash first</em>.</p>
+      </div>
+
+      <div class="critique-card">
+        <h5>Bug B — <code>range(n - str_len + 1)</code> ⇒ IndexError <span class="badge bug">BLOCKING</span></h5>
+        <p>With <code>j = idx + str_len</code>, the last iteration gives:</p>
+        <div class="code-block" style="font-size:0.82rem">
+idx_max = (n - str_len + 1) - 1 = n - str_len
+j_last  = idx_max + str_len = <span style="color:var(--red);font-weight:700">n</span>    <span class="cm">← valid indices: 0..n-1 → crash!</span>
+        </div>
+        <p>The +1 was an attempt to fix the off-by-one from submission #1, but the real problem is <code>j = idx + str_len</code> (should be <code>idx + str_len - 1</code>). Adding +1 to the range flips the bug from "never reaches the last substring" to "goes past the last valid index."</p>
+      </div>
+
+      <div class="critique-card">
+        <h5>Bugs C, D, E — Carried over from submission #2 <span class="badge bug">BLOCKING</span></h5>
+        <ul style="padding-left:1.5rem;color:var(--text-muted)">
+          <li><strong>C:</strong> <code>j = idx + str_len</code> — same off-by-one. <code>str_len</code> is <code>j - i</code>, so actual substring length = <code>str_len + 1</code>.</li>
+          <li><strong>D:</strong> <code>dp[i][j]</code> — still checks the cell being computed, not <code>dp[i+1][j-1]</code> (the inner substring).</li>
+          <li><strong>E:</strong> <code>str_len &lt;= 3</code> guard fires for actual lengths 2,3,4 — still wrong for actual length 4.</li>
+        </ul>
+      </div>
+
+      <h3 style="color:var(--yellow);margin-top:1.5rem">🟡 Design Issues</h3>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #6 — Base case never initializes <code>longest_palindrome</code></h5>
+        <p>If every palindrome is length 1 (e.g., <code>"abc"</code>), <code>longest_palindrome</code> stays <code>""</code>. Even the single test case that doesn't crash (<code>"a"</code>) returns <code>""</code>.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #7 — Still overwrites without length comparison</h5>
+        <p>Unchanged from #2. Relies on loop ordering rather than an explicit <code>len(candidate) > len(current)</code> guard.</p>
+      </div>
+
+      <h3 style="color:var(--accent);margin-top:1.5rem">🎯 The deeper pattern across all three submissions</h3>
+      <div class="concept-box">
+        <p style="color:var(--text-muted)">All three submissions share the same root cause: <strong>you're treating <code>str_len</code> as substring length when it's actually <code>j - i</code> (length − 1).</strong> This creates a cascade: the range bound, the base-case guard, and the recurrence all operate on the wrong quantity.</p>
+        <p style="color:var(--text-muted);margin-top:0.5rem">Tweaking ranges and start values won't fix it. You need to <strong>rename the variable to match reality</strong> and derive <code>j</code> from the invariant:</p>
+        <div class="code-block">
+<span class="cm"># INVARIANT: j - i + 1 == length</span>
+<span class="cm"># Therefore:  j = i + length - 1</span>
+
+<span class="kw">for</span> length <span class="kw">in</span> <span class="fn">range</span>(<span class="num">2</span>, n + <span class="num">1</span>):
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n - length + <span class="num">1</span>):
+        j = i + length - <span class="num">1</span>
+        dp[i][j] = (s[i] == s[j]) <span class="kw">and</span> (length <= <span class="num">3</span> <span class="kw">or</span> dp[i+<span class="num">1</span>][j-<span class="num">1</span>])
+        </div>
+        <p style="color:var(--text-muted)">Once <code>j</code> is correct, <strong>everything collapses into place:</strong> the range bound, the guard, and the recurrence all use the same <code>length</code> variable that means exactly what it says.</p>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="concept-box">
+  <h4>When you see a substring/subarray problem, ask:</h4>
+  <ol style="padding-left:1.5rem;color:var(--text-muted)">
+    <li>Can the answer for <code>[i..j]</code> be expressed in terms of <code>[i+1..j]</code>, <code>[i..j-1]</code>, or <code>[i+1..j-1]</code>?</li>
+    <li>Are the base cases (length 0, 1, or 2) trivial?</li>
+    <li>Is the recurrence monotonic (always depends on <em>shorter</em> intervals)?</li>
+  </ol>
+  <p>If yes to all three → <strong>interval DP, fill by length.</strong></p>
+</div>
+
+</div>
+
+<script>
+// ===================== STATE =====================
+let currentStr = "babad";
+let n = 0;
+let dp = [];
+let steps = [];          // array of { len, i, j, dpVal, longestStart, longestLen }
+let stepIndex = 0;
+let autoTimer = null;
+let speedMs = 800;
+
+// ===================== BUILD STEPS =====================
+function buildSteps(s) {
+  const n = s.length;
+  const dp = Array.from({ length: n }, () => new Array(n).fill(false));
+  const steps = [];
+
+  // Base: length 1
+  for (let i = 0; i < n; i++) {
+    dp[i][i] = true;
+  }
+  // We'll record these as a batch "pass" at the start
+
+  let longestStart = 0, longestLen = 1;
+
+  // Record initial state (len=1 diagonal)
+  steps.push({ len: 1, i: 0, j: 0, pass: 'diag', dpVal: true, longestStart: 0, longestLen: 1, allDiag: true, diagDone: false });
+
+  for (let len = 2; len <= n; len++) {
+    for (let i = 0; i + len - 1 < n; i++) {
+      const j = i + len - 1;
+      let dpVal = false;
+
+      if (s[i] === s[j]) {
+        if (len <= 3) {
+          dpVal = true;
+        } else {
+          dpVal = dp[i+1][j-1];
+        }
+      }
+
+      dp[i][j] = dpVal;
+
+      if (dpVal && len > longestLen) {
+        longestStart = i;
+        longestLen = len;
+      }
+
+      steps.push({
+        len, i, j, pass: 'cell', dpVal,
+        longestStart, longestLen,
+        allDiag: false, diagDone: false
+      });
+    }
+  }
+
+  // Final summary
+  steps.push({ len: n+1, i: 0, j:0, pass: 'done', dpVal: false, longestStart, longestLen, allDiag: false, diagDone: false });
+
+  return { dp, steps };
+}
+
+// ===================== RENDER =====================
+function renderAll() {
+  renderString();
+  renderDpTable();
+  renderStepInfo();
+  renderProgress();
+  updateButtons();
+}
+
+function renderString() {
+  const container = document.getElementById('string-display');
+  let html = '';
+  for (let k = 0; k < n; k++) {
+    let cls = 'char-box';
+    if (stepIndex > 0 && stepIndex < steps.length) {
+      const step = steps[stepIndex];
+      if (step.pass === 'cell') {
+        if (k === step.i) cls += ' highlight-i';
+        if (k === step.j) cls += ' highlight-j';
+        // Highlight inner palindrome range
+        if (k > step.i && k < step.j && step.dpVal && (step.j - step.i >= 2)) {
+          cls += ' palindrome-inner';
+        }
+        if ((k === step.i || k === step.j) && step.dpVal) {
+          cls += ' palindrome-match';
+        }
+      }
+      if (step.pass === 'done' || (step.pass === 'done')) {
+        // Highlight LPS range
+        if (k >= step.longestStart && k < step.longestStart + step.longestLen) {
+          cls += ' lps-char';
+        }
+      }
+    }
+    html += `<div class="${cls}"><span class="idx">${k}</span>${currentStr[k]}</div>`;
+  }
+  container.innerHTML = html;
+
+  // Show result box
+  const final = steps[steps.length - 1];
+  if (final && final.pass === 'done') {
+    document.getElementById('result-box').style.display = 'block';
+    document.getElementById('lps-result').textContent = `"${currentStr.substring(final.longestStart, final.longestStart + final.longestLen)}"`;
+    document.getElementById('lps-len').textContent = final.longestLen;
+  } else {
+    document.getElementById('result-box').style.display = 'none';
+  }
+}
+
+function renderDpTable() {
+  const table = document.getElementById('dp-table');
+  let html = '<thead><tr><th></th>';
+  for (let k = 0; k < n; k++) {
+    html += `<th>${k}<br><small>${currentStr[k]}</small></th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  for (let i = 0; i < n; i++) {
+    html += `<tr><th>${i}<br><small>${currentStr[i]}</small></th>`;
+    for (let j = 0; j < n; j++) {
+      let cls = '';
+      let txt = '';
+      if (j < i) {
+        txt = '·';
+        cls = '';
+      } else {
+        const val = dp[i][j];
+        cls = val ? 'T' : 'F';
+        txt = val ? 'T' : 'F';
+      }
+      html += `<td class="${cls}" data-r="${i}" data-c="${j}">${txt}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  table.innerHTML = html;
+
+  // Highlight current cell
+  if (stepIndex > 0 && stepIndex < steps.length) {
+    const step = steps[stepIndex];
+    if (step.pass === 'cell' || step.pass === 'diag') {
+      if (step.pass === 'diag' && !step.diagDone) {
+        // Highlight diagonal
+        for (let k = 0; k < n; k++) {
+          const cell = table.querySelector(`td[data-r="${k}"][data-c="${k}"]`);
+          if (cell) cell.classList.add('highlight-cell');
+        }
+      } else if (step.pass === 'cell') {
+        const cell = table.querySelector(`td[data-r="${step.i}"][data-c="${step.j}"]`);
+        if (cell) cell.classList.add('highlight-cell');
+        // Also highlight the cell it depends on: dp[i+1][j-1]
+        if (step.i + 1 <= step.j - 1 && step.len > 3) {
+          const depCell = table.querySelector(`td[data-r="${step.i+1}"][data-c="${step.j-1}"]`);
+          if (depCell) depCell.style.boxShadow = '0 0 10px var(--yellow)';
+        }
+      }
+    }
+    if (step.pass === 'done') {
+      // Highlight all LPS cells
+      for (let i = step.longestStart; i < step.longestStart + step.longestLen; i++) {
+        for (let j = step.longestStart; j < step.longestStart + step.longestLen; j++) {
+          if (j >= i) {
+            const cell = table.querySelector(`td[data-r="${i}"][data-c="${j}"]`);
+            if (cell) cell.classList.add('lps-cell');
+          }
+        }
+      }
+    }
+  }
+}
+
+function renderStepInfo() {
+  const numEl = document.getElementById('step-num');
+  const descEl = document.getElementById('step-desc');
+
+  if (stepIndex === 0) {
+    numEl.textContent = '—';
+    descEl.textContent = 'Click "Step Forward" to begin building the DP table';
+    return;
+  }
+
+  const step = steps[stepIndex];
+  numEl.textContent = stepIndex;
+
+  if (step.pass === 'diag') {
+    if (!step.diagDone) {
+      descEl.innerHTML = `<strong>Base case:</strong> Every single character is a palindrome → all <code>dp[i][i] = true</code>. Longest so far: "${currentStr[0]}" (len=1)`;
+    }
+  } else if (step.pass === 'cell') {
+    const sub = currentStr.substring(step.i, step.j + 1);
+    let dep = '';
+    if (step.len > 3) {
+      dep = ` | depends on dp[${step.i+1}][${step.j-1}] = ${dp[step.i+1][step.j-1] ? 'T' : 'F'}`;
+    } else if (step.len <= 3 && step.dpVal) {
+      dep = ' | (length ≤ 3, no inner dependency)';
+    }
+    descEl.innerHTML = `Checking <code>s[${step.i}..${step.j}]</code> = <strong>"${sub}"</strong>: s[${step.i}]=${currentStr[step.i]}, s[${step.j}]=${currentStr[step.j]} → <span style="color:${step.dpVal?'var(--green)':'var(--red)'}">${step.dpVal ? 'PALINDROME ✓' : 'not a palindrome'}</span>${dep}`;
+  } else if (step.pass === 'done') {
+    const lps = currentStr.substring(step.longestStart, step.longestStart + step.longestLen);
+    descEl.innerHTML = `✅ <strong>Done!</strong> Longest palindromic substring: <span style="color:var(--green);font-weight:700">"${lps}"</span> (length ${step.longestLen}, from index ${step.longestStart} to ${step.longestStart + step.longestLen - 1})`;
+  }
+}
+
+function renderProgress() {
+  const pct = steps.length > 1 ? Math.min(100, ((stepIndex - 1) / (steps.length - 2)) * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function updateButtons() {
+  const btnStep = document.getElementById('btn-step');
+  const prevBtn = document.getElementById('btn-prev');
+  if (stepIndex >= steps.length - 1) {
+    btnStep.textContent = '✓ Complete';
+    btnStep.disabled = true;
+  } else {
+    btnStep.textContent = '▶ Step Forward';
+    btnStep.disabled = false;
+  }
+}
+
+function resetState(str) {
+  currentStr = str;
+  n = str.length;
+  stepIndex = 0;
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  const { dp: newDp, steps: newSteps } = buildSteps(str);
+  dp = newDp;
+  steps = newSteps;
+  renderAll();
+}
+
+function stepForward() {
+  if (stepIndex < steps.length - 1) {
+    stepIndex++;
+    // If we just stepped onto the 'diag' pass, mark it so next step goes to first cell
+    if (steps[stepIndex] && steps[stepIndex].pass === 'diag') {
+      steps[stepIndex].diagDone = true;
+    }
+    renderAll();
+  }
+}
+
+function stepBackward() {
+  if (stepIndex > 0) {
+    stepIndex--;
+    // If we step back to diag, reset its done flag
+    if (steps[stepIndex] && steps[stepIndex].pass === 'diag') {
+      steps[stepIndex].diagDone = false;
+    }
+    renderAll();
+  }
+}
+
+function jumpToEnd() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  stepIndex = steps.length - 1;
+  renderAll();
+}
+
+function toggleAuto() {
+  if (autoTimer) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+    document.getElementById('btn-auto').textContent = '⟳ Auto-Play';
+    document.getElementById('btn-auto').classList.remove('active');
+    return;
+  }
+  document.getElementById('btn-auto').textContent = '⏸ Pause';
+  document.getElementById('btn-auto').classList.add('active');
+  autoPlay();
+}
+
+function autoPlay() {
+  if (!autoTimer) return;
+  if (stepIndex >= steps.length - 1) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+    document.getElementById('btn-auto').textContent = '⟳ Auto-Play';
+    document.getElementById('btn-auto').classList.remove('active');
+    return;
+  }
+  stepForward();
+  autoTimer = setTimeout(autoPlay, speedMs);
+}
+
+// ===================== EVENT LISTENERS =====================
+document.getElementById('btn-step').addEventListener('click', stepForward);
+document.getElementById('btn-reset').addEventListener('click', () => resetState(currentStr));
+document.getElementById('btn-auto').addEventListener('click', toggleAuto);
+document.getElementById('btn-jump').addEventListener('click', jumpToEnd);
+
+document.getElementById('speed-slider').addEventListener('input', (e) => {
+  speedMs = Math.round(parseFloat(e.target.value) * 1000);
+  document.getElementById('speed-label').textContent = (speedMs / 1000).toFixed(1) + 's';
+});
+
+document.getElementById('example-btns').addEventListener('click', (e) => {
+  if (e.target.tagName === 'BUTTON') {
+    document.querySelectorAll('#example-btns button').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    resetState(e.target.dataset.str);
+  }
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ') {
+    e.preventDefault();
+    stepForward();
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    stepBackward();
+  } else if (e.key === 'a') {
+    e.preventDefault();
+    toggleAuto();
+  } else if (e.key === 'r') {
+    e.preventDefault();
+    resetState(currentStr);
+  } else if (e.key === 'j') {
+    e.preventDefault();
+    jumpToEnd();
+  }
+});
+
+// ===================== SUBMISSION TOGGLE =====================
+function toggleSubmission(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+// Initial render
+resetState('babad');
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maximum Subarray — DP Deep Dive</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #334155;
+    --border: #475569;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --red: #f87171;
+    --pink: #f472b6;
+    --orange: #fb923c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 6rem; }
+
+  h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+  h1 .gradient-text { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { font-size: 1.5rem; font-weight: 700; margin: 2.5rem 0 1rem; color: var(--accent); border-bottom: 2px solid var(--surface2); padding-bottom: 0.4rem; }
+  h3 { font-size: 1.15rem; font-weight: 600; margin: 1.5rem 0 0.6rem; color: var(--accent2); }
+  p { margin: 0.6rem 0; color: var(--text-muted); }
+  strong { color: var(--text); }
+  code { background: var(--surface2); padding: 0.15em 0.45em; border-radius: 4px; font-size: 0.9em; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+  .tag { display: inline-block; background: var(--surface2); color: var(--accent); padding: 0.15em 0.6em; border-radius: 20px; font-size: 0.8rem; margin: 0.15rem 0.25rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+  }
+
+  /* CONCEPT BOX */
+  .concept-box {
+    background: linear-gradient(135deg, #1e293b 0%, #1a2340 100%);
+    border: 2px solid var(--accent2);
+    border-radius: 16px;
+    padding: 1.8rem 2rem;
+    margin: 1.5rem 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .concept-box::before {
+    content: '💡';
+    position: absolute;
+    top: 12px; right: 16px;
+    font-size: 1.8rem;
+    opacity: 0.4;
+  }
+  .concept-box h4 { color: var(--accent); font-size: 1.1rem; margin-bottom: 0.6rem; }
+
+  .formula {
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 1rem 1.4rem;
+    margin: 0.8rem 0;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.95rem;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* ===== ARRAY VISUALIZATION ===== */
+  .array-viz-wrapper {
+    overflow-x: auto;
+    margin: 1.2rem 0;
+  }
+  .array-viz {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    margin: 0.5rem 0;
+  }
+  .arr-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .arr-idx {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 2px;
+  }
+  .arr-val-box {
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    transition: background 0.35s, border-color 0.35s, transform 0.3s;
+  }
+  .arr-val-box.curr-end {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    transform: scale(1.12);
+    z-index: 2;
+    box-shadow: 0 0 18px var(--accent);
+    font-weight: 800;
+  }
+  .arr-val-box.in-current-subarray {
+    background: rgba(56, 189, 248, 0.25);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .arr-val-box.in-best-subarray {
+    background: var(--green);
+    color: var(--bg);
+    border-color: var(--green);
+    animation: glow-best 1.2s ease-in-out infinite;
+  }
+  .arr-val-box.in-best-subarray.curr-end {
+    box-shadow: 0 0 20px var(--green);
+    border-color: var(--green);
+    transform: scale(1.12);
+  }
+  @keyframes glow-best {
+    0%, 100% { box-shadow: 0 0 6px var(--green); }
+    50% { box-shadow: 0 0 20px var(--green); }
+  }
+  .arr-dp {
+    font-size: 0.75rem;
+    color: var(--pink);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 3px;
+    font-weight: 500;
+  }
+  .arr-dp-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* DP TABLE */
+  .dp-table-wrapper {
+    overflow-x: auto;
+    margin: 1.2rem 0;
+  }
+  .dp-table {
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.9rem;
+    margin: 0 auto;
+  }
+  .dp-table th, .dp-table td {
+    min-width: 56px;
+    padding: 0.35rem 0.5rem;
+    text-align: center;
+    border: 1px solid var(--border);
+    transition: background 0.4s, transform 0.3s, box-shadow 0.3s;
+  }
+  .dp-table th {
+    background: var(--surface2);
+    color: var(--accent2);
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+  .dp-table td {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.85rem;
+  }
+  .dp-table td.highlight-cell {
+    transform: scale(1.1);
+    box-shadow: 0 0 16px var(--accent);
+    z-index: 2;
+    border-color: var(--accent);
+    font-weight: 800;
+    background: rgba(56, 189, 248, 0.2);
+    color: var(--accent);
+  }
+  .dp-table td.best-cell {
+    background: rgba(74, 222, 128, 0.3);
+    border-color: var(--green);
+    color: var(--green);
+    font-weight: 800;
+    animation: pulse-best 1s ease-in-out infinite;
+  }
+  @keyframes pulse-best {
+    0%, 100% { box-shadow: 0 0 8px var(--green); }
+    50% { box-shadow: 0 0 22px var(--green); }
+  }
+
+  /* DECISION VISUAL */
+  .decision-viz {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+  }
+  .decision-branch {
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 0.6rem 1rem;
+    transition: all 0.3s;
+  }
+  .decision-branch.chosen {
+    border-color: var(--green);
+    background: rgba(74, 222, 128, 0.12);
+    box-shadow: 0 0 14px rgba(74, 222, 128, 0.3);
+  }
+  .decision-branch.rejected {
+    border-color: var(--red);
+    background: rgba(248, 113, 113, 0.08);
+    opacity: 0.5;
+  }
+  .decision-vs {
+    color: var(--yellow);
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+  .decision-arrow {
+    color: var(--accent2);
+    font-size: 1.3rem;
+  }
+
+  /* BUTTONS */
+  .btn-group { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 0.8rem 0; }
+  .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .btn:hover { background: var(--border); border-color: var(--accent); }
+  .btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .btn.accent { background: var(--accent2); border-color: var(--accent2); color: #fff; font-weight: 600; }
+  .btn.accent:hover { filter: brightness(1.15); }
+
+  /* STEP DISPLAY */
+  .step-indicator {
+    display: flex; align-items: center; gap: 0.5rem; margin: 1.2rem 0;
+    font-size: 0.9rem; color: var(--text-muted);
+  }
+  .step-indicator .step-num {
+    background: var(--accent2); color: #fff;
+    padding: 0.15rem 0.6rem; border-radius: 12px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+  .code-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.3rem;
+    margin: 1rem 0;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    white-space: pre;
+  }
+  .code-block .kw { color: #ff7b72; }
+  .code-block .fn { color: #d2a8ff; }
+  .code-block .str { color: #a5d6ff; }
+  .code-block .cm { color: #8b949e; font-style: italic; }
+  .code-block .num { color: #79c0ff; }
+  .code-block .callout { color: var(--yellow); }
+
+  /* PROGRESS */
+  .progress-bar {
+    width: 100%; height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    margin: 0.5rem 0;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  .result-box {
+    background: linear-gradient(135deg, #1a2340, #1e293b);
+    border: 2px solid var(--green);
+    border-radius: 12px;
+    padding: 1.2rem 1.6rem;
+    margin: 1.2rem 0;
+    font-size: 1.1rem;
+  }
+  .result-box .big-str { font-size: 1.6rem; font-weight: 800; color: var(--green); font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+
+  .tip-box {
+    background: rgba(251, 146, 60, 0.1);
+    border-left: 4px solid var(--orange);
+    padding: 0.8rem 1rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+  }
+  .tip-box::before { content: '🔑 '; }
+
+  /* ===== SUBMISSIONS ===== */
+  .submissions-section { margin-top: 3rem; }
+  .submission-entry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin: 1.2rem 0;
+    overflow: hidden;
+  }
+  .submission-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.4rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+  }
+  .submission-header:hover { background: var(--surface2); }
+  .submission-header .left { display: flex; align-items: center; gap: 0.8rem; }
+  .submission-header .chevron {
+    font-size: 1.2rem; transition: transform 0.3s;
+    color: var(--text-muted);
+  }
+  .submission-entry.open .submission-header .chevron { transform: rotate(90deg); }
+  .submission-header .title { font-weight: 700; font-size: 1.05rem; }
+  .badge {
+    display: inline-block;
+    padding: 0.2em 0.7em; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 700;
+  }
+  .badge.bug    { background: rgba(248,113,113,0.15); color: var(--red); }
+  .badge.fixed  { background: rgba(74,222,128,0.15); color: var(--green); }
+  .badge.warn   { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .badge.info   { background: rgba(56,189,248,0.12); color: var(--accent); }
+  .submission-body {
+    display: none;
+    padding: 0 1.4rem 1.4rem;
+    border-top: 1px solid var(--border);
+  }
+  .submission-entry.open .submission-body { display: block; }
+
+  .critique-card {
+    background: rgba(248,113,113,0.06);
+    border-left: 4px solid var(--red);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.2rem;
+    margin: 1rem 0;
+  }
+  .critique-card h5 { color: var(--red); margin-bottom: 0.3rem; font-size: 0.95rem; }
+  .fix-card {
+    background: rgba(74,222,128,0.06);
+    border-left: 4px solid var(--green);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.2rem;
+    margin: 1rem 0;
+  }
+  .fix-card h5 { color: var(--green); margin-bottom: 0.3rem; font-size: 0.95rem; }
+  .score-bar {
+    display: flex; align-items: center; gap: 0.6rem;
+    margin: 0.8rem 0;
+  }
+  .score-pill {
+    background: var(--surface2);
+    border-radius: 20px;
+    padding: 0.3rem 1rem;
+    font-weight: 700; font-size: 0.9rem;
+  }
+  .score-pill.high { color: var(--green); border: 1px solid var(--green); }
+  .score-pill.med  { color: var(--yellow); border: 1px solid var(--yellow); }
+  .score-pill.low  { color: var(--red); border: 1px solid var(--red); }
+
+  .kadane-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 640px) {
+    .kadane-compare { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>
+  <span class="gradient-text">Maximum Subarray</span><br>
+  <small style="font-size:1rem;font-weight:400;color:var(--text-muted)">First-principles DP: from "what should I do at each step?" to Kadane</small>
+</h1>
+
+<p>We're going to derive the recurrence <strong>from scratch</strong> — not just memorize Kadane's algorithm. By the end, you'll know <strong>why</strong> the recurrence takes this shape and how to recognize the same pattern in other problems.</p>
+
+<!-- ============================================================ -->
+<h2>1. What is a subarray? What are we really optimizing?</h2>
+
+<div class="card">
+  <p>A <strong>subarray</strong> is a <strong>contiguous</strong> segment of the array. Unlike a subsequence, you <em>cannot skip</em> elements.</p>
+
+  <p>We want the subarray with the <strong>maximum sum</strong>. Let's think about what that means one element at a time:</p>
+
+  <div class="concept-box">
+    <h4>First-principles question</h4>
+    <p>Imagine you're scanning left to right. When you reach position <code>i</code>, you look at <code>nums[i]</code> and ask:</p>
+    <p style="color:var(--accent);font-weight:600;font-size:1.05rem;text-align:center;margin:0.8rem 0">
+      "Should I <span style="color:var(--green)">extend</span> the best subarray ending before me,<br>
+      or should I <span style="color:var(--yellow)">start fresh</span> right here?"
+    </p>
+    <p>This is the <strong>only</strong> choice at each position — and it's what makes DP work.</p>
+  </div>
+
+  <p>Let's make this concrete with <code>[-2, 1, -3, 4, -1, 2, 1, -5, 4]</code>:</p>
+
+  <div class="array-viz-wrapper">
+    <div class="array-viz" id="static-demo">
+    </div>
+  </div>
+
+  <p>At index 0: only one option — take <code>-2</code>. Best subarray ending at 0 has sum <strong>-2</strong>.</p>
+  <p>At index 1 (value <code>1</code>): extend with <code>-2</code> → sum <code>-1</code>, or start fresh → sum <code>1</code>. <strong>Start fresh</strong> wins.</p>
+  <p>At index 3 (value <code>4</code>): extend the best ending at 2 (<code>-2</code>) → sum <code>2</code>, or start fresh → sum <code>4</code>. <strong>Start fresh</strong> wins.</p>
+  <p>At index 4 (value <code>-1</code>): extend <code>4</code> → sum <code>3</code>, or start fresh → sum <code>-1</code>. <strong>Extend</strong> wins.</p>
+
+  <div class="concept-box">
+    <h4>The "aha" moment</h4>
+    <p>When is it <strong>always</strong> better to start fresh? When the previous best is <strong>negative</strong> — adding a negative to the current number can only make it smaller. When the previous best is <strong>positive</strong>, extending always improves the sum.</p>
+    <p style="margin-top:0.5rem;color:var(--accent)">This gives us a simple rule:<br>
+    <code>if previous_sum > 0 → extend it. Otherwise → start fresh.</code></p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>2. The recurrence relation</h2>
+
+<p>Define <code>dp[i]</code> = <strong>maximum sum of a subarray ending at index i</strong>.</p>
+
+<div class="formula">
+<span style="color:var(--text-muted)">Base case:</span>
+<span style="color:var(--accent)">dp[0]</span> = nums[0]       <span style="color:var(--text-muted)">// the only subarray ending at index 0</span>
+
+<span style="color:var(--text-muted)">Recurrence (i ≥ 1):</span>
+<span style="color:var(--accent)">dp[i]</span> = max( <span style="color:var(--green)">nums[i]</span>,  <span style="color:var(--pink)">dp[i-1] + nums[i]</span> )
+           └─ start fresh ─┘  └── extend previous ──┘
+
+<span style="color:var(--text-muted)">Final answer:</span>
+result = max( dp[0], dp[1], ..., dp[n-1] )
+</div>
+
+<p>Break this down:</p>
+<ul style="color:var(--text-muted);padding-left:1.5rem;">
+  <li><strong style="color:var(--green)">start fresh</strong>: throw away everything before <code>i</code>. The best subarray ending at <code>i</code> is just <code>nums[i]</code> alone.</li>
+  <li><strong style="color:var(--pink)">extend</strong>: take the best subarray ending at <code>i-1</code> and append <code>nums[i]</code>. This is only beneficial when <code>dp[i-1] > 0</code>.</li>
+  <li>The recurrence <code>max(nums[i], dp[i-1] + nums[i])</code> encodes both cases in one line — <code>extend</code> wins when <code>dp[i-1] > 0</code>, <code>start fresh</code> wins otherwise.</li>
+</ul>
+
+<div class="concept-box">
+  <h4>Why this recurrence has optimal substructure</h4>
+  <p>To find the <strong>best subarray ending at i</strong>, we only need:</p>
+  <ol style="padding-left:1.5rem;color:var(--text-muted)">
+    <li><code>nums[i]</code> — the current element (given)</li>
+    <li><code>dp[i-1]</code> — the <strong>best subarray ending at the previous position</strong> (already computed)</li>
+  </ol>
+  <p>We don't need to know <em>which</em> subarray produced <code>dp[i-1]</code> — the sum alone is enough. This is the hallmark of <strong>1D DP</strong>: each state depends only on the <strong>immediately previous</strong> state.</p>
+</div>
+
+<div class="tip-box">
+  <strong>The key DP insight:</strong> we don't try every possible subarray (that would be O(n²)). Instead, we <strong>reuse</strong> the answer for subarrays ending at <code>i-1</code> to compute the answer for subarrays ending at <code>i</code> in O(1). The answer for the whole array is just the maximum over all <code>dp[i]</code>.
+</div>
+
+<!-- ============================================================ -->
+<h2>3. Interactive DP walkthrough</h2>
+
+<p>Choose an example array and step through the DP computation:</p>
+
+<div class="btn-group" id="example-btns">
+  <button class="btn active" data-arr="-2,1,-3,4,-1,2,1,-5,4">[-2,1,-3,4,-1,2,1,-5,4]</button>
+  <button class="btn" data-arr="5,4,-1,7,8">[5,4,-1,7,8]</button>
+  <button class="btn" data-arr="-2,-1">[-2,-1]</button>
+  <button class="btn" data-arr="-2,1,-3,4,-1,5,-2,3">[-2,1,-3,4,-1,5,-2,3]</button>
+</div>
+
+<div class="card">
+  <div class="array-viz-wrapper">
+    <div class="array-viz" id="array-display"></div>
+  </div>
+
+  <div class="step-indicator" id="step-info">
+    <span class="step-num" id="step-num">0</span>
+    <span id="step-desc">Click "Step Forward" to begin</span>
+  </div>
+
+  <div class="decision-viz" id="decision-viz" style="display:none">
+    <div class="decision-branch" id="branch-extend">
+      <span style="color:var(--pink)">EXTEND</span><br>
+      <small>dp[i-1] + nums[i]</small><br>
+      <strong id="val-extend">—</strong>
+    </div>
+    <span class="decision-vs">vs</span>
+    <div class="decision-branch" id="branch-fresh">
+      <span style="color:var(--green)">FRESH</span><br>
+      <small>nums[i]</small><br>
+      <strong id="val-fresh">—</strong>
+    </div>
+    <span class="decision-arrow">→</span>
+    <div class="decision-branch" id="branch-result">
+      <span style="color:var(--accent)">dp[i]</span><br>
+      <strong id="val-dp">—</strong>
+    </div>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+  <div class="btn-group">
+    <button class="btn accent" id="btn-step">▶ Step Forward</button>
+    <button class="btn" id="btn-reset">↺ Reset</button>
+    <button class="btn" id="btn-auto">⟳ Auto-Play</button>
+    <button class="btn" id="btn-jump">⏩ Jump to End</button>
+  </div>
+
+  <div style="margin-top:1rem">
+    <label style="color:var(--text-muted);font-size:0.85rem;">Speed:</label>
+    <input type="range" id="speed-slider" min="0.3" max="2" step="0.1" value="0.8" style="margin-left:0.5rem;width:140px">
+    <span id="speed-label" style="color:var(--text-muted);font-size:0.8rem;margin-left:0.3rem">0.8s</span>
+  </div>
+</div>
+
+<div class="dp-table-wrapper">
+  <table class="dp-table" id="dp-table"></table>
+</div>
+
+<div class="result-box" id="result-box" style="display:none">
+  <span style="color:var(--text-muted)">Maximum subarray sum:</span>
+  <span class="big-str" id="max-result"></span>
+  <span style="color:var(--text-muted);margin-left:0.5rem">(subarray <strong id="best-subarray"></strong>)</span>
+</div>
+
+<!-- ============================================================ -->
+<h2>4. The traversal order (why it's simple)</h2>
+
+<div class="card">
+  <p>Unlike interval DP (palindromic substring), this is a <strong>1D DP</strong>. The traversal is straightforward:</p>
+
+  <div class="concept-box">
+    <h4>Left-to-right, single pass</h4>
+    <p><code>dp[i]</code> depends <strong>only</strong> on <code>dp[i-1]</code>. There's no dependency on future indices or shorter intervals. You can fill the array in a single left-to-right pass — O(n) time.</p>
+  </div>
+
+  <div class="code-block">
+<span class="cm">// Traversal: one pass, left to right</span>
+<span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">1</span>; i < n; i++) {
+    dp[i] = Math.max(nums[i], dp[i-<span class="num">1</span>] + nums[i]);
+    <span class="cm">// dp[i-1] is already computed → safe</span>
+}
+  </div>
+
+  <div class="tip-box">
+    Because each <code>dp[i]</code> depends only on <code>dp[i-1]</code>, we can drop the array entirely and keep a single variable. This is <strong>Kadane's algorithm</strong> — same recurrence, O(1) space.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>5. The complete solutions</h2>
+
+<h3>5a. Full DP array — O(n) time, O(n) space</h3>
+<div class="code-block">
+<span class="cm">/**
+ * Maximum Subarray — DP array
+ * dp[i] = max sum of subarray ending at i
+ * Recurrence: dp[i] = max(nums[i], dp[i-1] + nums[i])
+ */</span>
+<span class="kw">function</span> <span class="fn">maxSubArray</span>(nums) {
+  <span class="kw">const</span> n = nums.length;
+  <span class="kw">const</span> dp = <span class="kw">new</span> Array(n);
+  dp[<span class="num">0</span>] = nums[<span class="num">0</span>];          <span class="cm">// Base case</span>
+  <span class="kw">let</span> maxSum = dp[<span class="num">0</span>];
+
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">1</span>; i < n; i++) {
+    dp[i] = Math.max(nums[i], dp[i-<span class="num">1</span>] + nums[i]);
+    maxSum = Math.max(maxSum, dp[i]);
+  }
+
+  <span class="kw">return</span> maxSum;
+}
+</div>
+
+<h3>5b. Kadane's Algorithm — O(n) time, O(1) space</h3>
+<div class="code-block">
+<span class="cm">/**
+ * Maximum Subarray — Kadane's Algorithm
+ * Space-optimized: track only current dp value
+ */</span>
+<span class="kw">function</span> <span class="fn">maxSubArray</span>(nums) {
+  <span class="kw">let</span> currentMax = nums[<span class="num">0</span>];   <span class="cm">// dp[i] — best ending at current position</span>
+  <span class="kw">let</span> globalMax  = nums[<span class="num">0</span>];   <span class="cm">// max(dp[0]..dp[i])</span>
+
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">1</span>; i < nums.length; i++) {
+    currentMax = Math.max(nums[i], currentMax + nums[i]);
+    globalMax  = Math.max(globalMax, currentMax);
+  }
+
+  <span class="kw">return</span> globalMax;
+}
+</div>
+
+<div class="kadane-compare">
+  <div class="card" style="margin:0">
+    <h4 style="color:var(--accent);margin-bottom:0.5rem">DP Array Version</h4>
+    <ul style="color:var(--text-muted);padding-left:1.5rem;font-size:0.9rem">
+      <li>Explicit <code>dp[i]</code> semantics</li>
+      <li>Easier to reason about</li>
+      <li>Extensible (e.g., reconstruct the subarray)</li>
+      <li>O(n) space</li>
+    </ul>
+  </div>
+  <div class="card" style="margin:0">
+    <h4 style="color:var(--green);margin-bottom:0.5rem">Kadane's Version</h4>
+    <ul style="color:var(--text-muted);padding-left:1.5rem;font-size:0.9rem">
+      <li>Same recurrence, different bookkeeping</li>
+      <li><code>currentMax</code> = <code>dp[i]</code> at step i</li>
+      <li>O(1) space — optimal</li>
+      <li>Standard interview answer</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>6. Divide and Conquer (the follow-up)</h2>
+
+<div class="card">
+  <p>The problem's follow-up asks for a <strong>divide and conquer</strong> solution. Here's the intuition:</p>
+
+  <div class="concept-box">
+    <h4>The cross-midpoint insight</h4>
+    <p>For any subarray, one of three things is true:</p>
+    <ol style="padding-left:1.5rem;color:var(--text-muted)">
+      <li>It lies <strong>entirely in the left half</strong></li>
+      <li>It lies <strong>entirely in the right half</strong></li>
+      <li>It <strong>crosses the midpoint</strong> (starts in left, ends in right)</li>
+    </ol>
+    <p>Cases 1 and 2 are recursive. Case 3 can be computed in O(n) by finding the max suffix sum of the left half and max prefix sum of the right half, then adding them.</p>
+  </div>
+
+  <div class="code-block">
+<span class="cm">/**
+ * Maximum Subarray — Divide & Conquer
+ * T(n) = 2T(n/2) + O(n)  →  O(n log n)
+ */</span>
+<span class="kw">function</span> <span class="fn">maxSubArrayDC</span>(nums, left = <span class="num">0</span>, right = nums.length - <span class="num">1</span>) {
+  <span class="kw">if</span> (left === right) <span class="kw">return</span> nums[left];
+
+  <span class="kw">const</span> mid = Math.floor((left + right) / <span class="num">2</span>);
+
+  <span class="cm">// Best in left half, best in right half</span>
+  <span class="kw">const</span> leftBest  = maxSubArrayDC(nums, left, mid);
+  <span class="kw">const</span> rightBest = maxSubArrayDC(nums, mid + <span class="num">1</span>, right);
+
+  <span class="cm">// Best crossing the midpoint</span>
+  <span class="kw">let</span> leftSum = -<span class="fn">Infinity</span>, sum = <span class="num">0</span>;
+  <span class="kw">for</span> (<span class="kw">let</span> i = mid; i >= left; i--) {
+    sum += nums[i];
+    leftSum = Math.max(leftSum, sum);
+  }
+
+  <span class="kw">let</span> rightSum = -<span class="fn">Infinity</span>;
+  sum = <span class="num">0</span>;
+  <span class="kw">for</span> (<span class="kw">let</span> i = mid + <span class="num">1</span>; i <= right; i++) {
+    sum += nums[i];
+    rightSum = Math.max(rightSum, sum);
+  }
+
+  <span class="kw">const</span> crossBest = leftSum + rightSum;
+
+  <span class="kw">return</span> Math.max(leftBest, rightBest, crossBest);
+}
+  </div>
+
+  <div class="tip-box">
+    The divide-and-conquer approach runs in O(n log n) — slower than Kadane's O(n). However, the <strong>cross-midpoint</strong> pattern (left suffix max + right prefix max) is a classic technique that shows up in segment trees and range query problems where you <em>do</em> need it.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>7. Recognizing this pattern in other problems</h2>
+
+<div class="card">
+  <table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+    <thead>
+      <tr style="text-align:left">
+        <th style="padding:0.5rem;border-bottom:2px solid var(--border);color:var(--accent)">Problem</th>
+        <th style="padding:0.5rem;border-bottom:2px solid var(--border);color:var(--accent)">Recurrence</th>
+        <th style="padding:0.5rem;border-bottom:2px solid var(--border);color:var(--accent)">Pattern</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Maximum Subarray</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>dp[i] = max(nums[i], dp[i-1] + nums[i])</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">1D, depends on dp[i-1]</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Maximum Product Subarray</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>dpMax[i] = max(nums[i], dpMax[i-1]*nums[i], dpMin[i-1]*nums[i])</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">1D, track both min and max</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Maximum Sum Circular Subarray</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>Kadane + Kadane on negated array + wrap-around</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">1D + circular trick</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">Best Time to Buy/Sell Stock</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>dp[i] = max(dp[i-1], price[i] - minSoFar)</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">1D, depends on prefix min</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">House Robber</td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)"><code>dp[i] = max(dp[i-1], dp[i-2] + nums[i])</code></td>
+        <td style="padding:0.5rem;border-bottom:1px solid var(--border)">1D, depends on dp[i-1] and dp[i-2]</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="margin-top:0.8rem;color:var(--text-muted)">The common thread: <strong>1D DP with a "continue-or-restart" decision</strong>. The recurrence is always <code>dp[i] = max(fresh_start, extend_previous)</code> — the only difference is what "extend" means in each context.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2>8. First-principles derivation checklist</h2>
+
+<div class="concept-box">
+  <h4>When you see a "contiguous subarray" problem, ask:</h4>
+  <ol style="padding-left:1.5rem;color:var(--text-muted)">
+    <li><strong>What does "ending at i" look like?</strong> — Define <code>dp[i]</code> as the best answer for subarrays that <em>must</em> end at <code>i</code>. This constraint is what unlocks the recurrence.</li>
+    <li><strong>What's the choice at each position?</strong> — For maximum subarray, it's "extend vs. fresh." For product subarray, it's "extend positive, extend negative, or fresh." The choice defines the recurrence.</li>
+    <li><strong>How many previous states do I need?</strong> — If <code>dp[i]</code> depends only on <code>dp[i-1]</code>, you have O(1) space. If it depends on <code>dp[i-2]</code> or a window, you need more.</li>
+    <li><strong>Is the answer <code>dp[n-1]</code> or <code>max(dp[0..n-1])</code>?</strong> — For "ending at" DP, the answer is typically the maximum over all <code>dp[i]</code>, not necessarily the last one.</li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2>9. Submissions <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400">— click to expand</span></h2>
+
+<div class="submissions-section">
+
+  <!-- ===== SUBMISSION 1 ===== -->
+  <div class="submission-entry" id="submission-1">
+    <div class="submission-header" onclick="toggleSubmission('submission-1')">
+      <div class="left">
+        <span class="chevron">▶</span>
+        <span class="title">Submission #1 — Explicit start-fresh / extend branches (first attempt)</span>
+        <span class="badge bug">2 bugs</span>
+        <span class="badge warn">6 issues</span>
+      </div>
+      <span style="color:var(--text-muted);font-size:0.8rem">Click to expand</span>
+    </div>
+    <div class="submission-body">
+
+      <!-- ORIGINAL CODE -->
+      <h4 style="color:var(--text-muted);margin-top:0.8rem">Your submitted code:</h4>
+      <div class="code-block">
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">maxSubArray</span>(<span class="kw">self</span>, nums: List[<span class="kw">int</span>]) -> <span class="kw">int</span>:
+
+        <span class="cm"># State</span>
+        a_start = <span class="num">0</span>
+        a_end = <span class="num">0</span>
+        max_sum = nums[<span class="num">0</span>]
+        cur_sum = nums[<span class="num">0</span>]
+
+        <span class="kw">for</span> idx <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, <span class="fn">len</span>(nums)):
+            n = nums[idx]
+            <span class="cm"># if cur_sum is negative - better to start a fresh array</span>
+            <span class="kw">if</span> cur_sum < <span class="num">0</span>:
+                a_start = idx
+                a_end = idx
+                max_sum = n             <span class="callout">← BUG #1: unconditionally overwrites global max</span>
+                cur_sum = n
+
+            <span class="kw">else</span>:
+            <span class="cm"># if it's positive - then include it</span>   <span class="callout">← Issue: ambiguous indentation</span>
+                new_sum = cur_sum + n
+                <span class="kw">if</span> new_sum > max_sum:
+                    a_end = idx
+                    max_sum = new_sum
+                cur_sum = new_sum
+
+        <span class="fn">print</span>(<span class="str">f"Maximum subarray: {nums[a_start:a_end+1]}"</span>)
+        <span class="fn">print</span>(<span class="str">f"Max sum: {max_sum}"</span>)
+        <span class="kw">return</span> max_sum
+      </div>
+
+      <!-- INTERVIEWER VERDICT -->
+      <div class="score-bar" style="margin-top:1.2rem">
+        <span style="font-weight:700;color:var(--text)">Interviewer verdict:</span>
+        <span class="score-pill low">Would not pass</span>
+        <span style="color:var(--text-muted);font-size:0.85rem">1 critical logic bug hides behind a deceptively correct structure</span>
+      </div>
+
+      <!-- BUG-BY-BUG -->
+      <h3 style="color:var(--red);margin-top:1.5rem">🔴 Blocking Bugs</h3>
+
+      <div class="critique-card">
+        <h5>Bug #1 — <code>max_sum = n</code> destroys the global maximum <span class="badge bug">BLOCKING</span></h5>
+        <p>Every time <code>cur_sum &lt; 0</code>, you reset <code>max_sum = n</code> <strong>without comparing against the existing best</strong>. This means if the previously found global maximum is larger than the fresh-start element, you throw it away.</p>
+        <p style="margin-top:0.5rem"><strong>Counterexample:</strong> <code>[2, -3, 1]</code></p>
+        <table style="border-collapse:collapse;font-size:0.85rem;margin:0.5rem 0;width:100%">
+          <tr style="background:var(--surface2)">
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">Step</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">idx</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">nums[idx]</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">cur_sum (before)</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">Branch</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">max_sum (after)</th>
+            <th style="padding:0.35rem 0.6rem;text-align:left;color:var(--accent2)">Correct max</th>
+          </tr>
+          <tr>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">init</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">0</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--accent)">2</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--green);font-weight:700">2</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">2</td>
+          </tr>
+          <tr>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">1</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">1</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">-3</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--accent)">2</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--pink)">else (extend)</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--green);font-weight:700">2</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">2</td>
+          </tr>
+          <tr style="background:rgba(248,113,113,0.08)">
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">2</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">2</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border)">1</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--red)">-1</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--green)">if (fresh)</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--red);font-weight:700">1</td>
+            <td style="padding:0.35rem 0.6rem;border-top:1px solid var(--border);color:var(--green)">2</td>
+          </tr>
+        </table>
+        <p style="margin-top:0.6rem">At idx=2, <code>cur_sum = -1 &lt; 0</code> → enters the fresh branch → <code>max_sum = 1</code>. The correct answer is <strong>2</strong> (the element at index 0 alone). Your code returns <strong>1</strong>.</p>
+        <p style="color:var(--yellow);margin-top:0.4rem">⚠️ This bug is easy to miss because it <em>only</em> fires when: (a) <code>cur_sum</code> goes negative, AND (b) the fresh-start element is smaller than a previous best. Many test cases never trigger (a) because they're overwhelmed with positive numbers.</p>
+        <div class="fix-card">
+          <h5>Fix:</h5>
+          <code>max_sum = max(max_sum, n)</code> — the global max should never decrease
+        </div>
+      </div>
+
+      <div class="critique-card">
+        <h5>Bug #2 — <code>a_start</code> / <code>a_end</code> corrupted by the same overwrite <span class="badge bug">BLOCKING</span></h5>
+        <p>When Bug #1 fires, the tracking variables <code>a_start</code> and <code>a_end</code> are reset to the fresh-start position even though that new subarray doesn't beat the old best. This means:</p>
+        <ul style="padding-left:1.5rem;color:var(--text-muted);margin-top:0.3rem">
+          <li>The <code>print</code> at the bottom reports the wrong subarray</li>
+          <li>If anyone extended this code to return the subarray (instead of just the sum), it would be silently wrong</li>
+          <li>The tracking variables <strong>disagree</strong> with <code>max_sum</code> — a classic invariant violation</li>
+        </ul>
+        <p style="margin-top:0.4rem">In the <code>[2, -3, 1]</code> counterexample: <code>a_start=2, a_end=2</code> but <code>max_sum</code> should be 2 (from index 0). The tracking says <code>[1]</code> is the answer, which contradicts the correct answer <code>[2]</code>.</p>
+        <div class="fix-card">
+          <h5>Fix:</h5>
+          Only update <code>a_start</code>/<code>a_end</code> when the fresh-start actually beats the existing <code>max_sum</code>:<br>
+          <code>if n > max_sum: a_start = a_end = idx; max_sum = n</code>
+        </div>
+      </div>
+
+      <!-- DESIGN ISSUES -->
+      <h3 style="color:var(--yellow);margin-top:1.5rem">🟡 Design / Code Quality Issues</h3>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #3 — Debug <code>print</code> statements in production submission</h5>
+        <p>LeetCode doesn't penalize <code>print()</code>, but in a real interview or code review, debug scaffolding left in the final answer signals carelessness. If the problem asked for the subarray itself, the prints would be a substitute for a proper return value — which isn't what was asked.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #4 — Variable <code>n</code> shadows conventional meaning</h5>
+        <p><code>n</code> is universally used for array length. Using it for the current element is confusing — especially when <code>len(nums)</code> appears nearby. An interviewer will ask: "what does <code>n</code> represent here?" Use <code>num</code> or <code>x</code>.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #5 — Inverted condition structure</h5>
+        <p>You test <code>if cur_sum &lt; 0</code> (the bad case) first and <code>else</code> (the good case) second. The canonical Kadane tests <code>if cur_sum &gt; 0</code> (extend) / <code>else</code> (fresh). Your version is functionally equivalent but reads as "when things are bad, do X; otherwise, Y" — which forces the reader to invert the logic mentally. Always put the <strong>affirmative</strong> branch first:</p>
+        <div class="code-block" style="font-size:0.8rem">
+<span class="cm"># Canonical: test the good case first</span>
+<span class="kw">if</span> cur_sum > <span class="num">0</span>:
+    cur_sum += num          <span class="cm"># extend — the natural, desirable action</span>
+<span class="kw">else</span>:
+    cur_sum = num           <span class="cm"># start fresh — the fallback</span>
+max_sum = <span class="fn">max</span>(max_sum, cur_sum)
+        </div>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #6 — Ambiguous comment indentation inside <code>else:</code></h5>
+        <p>This is subtle but it's exactly the kind of thing a strict reviewer flags:</p>
+        <div class="code-block" style="font-size:0.82rem">
+            <span class="kw">else</span>:
+            <span class="cm"># if it's positive - then include it</span>
+                new_sum = cur_sum + n
+        </div>
+        <p>The comment is indented to the same level as <code>else:</code> (12 spaces), while <code>new_sum</code> is at 16 spaces. Python <em>technically</em> accepts this — comments are ignored by the parser and don't affect block structure. But <strong>every human reader will do a double-take</strong> wondering if this is a syntax error. The comment should be inside the block:</p>
+        <div class="code-block" style="font-size:0.82rem">
+            <span class="kw">else</span>:
+                <span class="cm"># cur_sum >= 0 — extending is beneficial or neutral</span>
+                new_sum = cur_sum + n
+        </div>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #7 — <code>a_start</code> never updated during extension</h5>
+        <p>When the <code>else</code> branch finds <code>new_sum > max_sum</code>, you update <code>a_end = idx</code> but never touch <code>a_start</code>. This happens to work because <code>a_start</code> was set when you entered the current subarray (the last time you started fresh). But this is an <strong>implicit invariant</strong> — the code doesn't state it, so a future refactor could break it. Explicitly tracking where the current subarray begins (separate from where the best subarray begins) is clearer:</p>
+        <div class="code-block" style="font-size:0.8rem">
+curr_start = <span class="num">0</span>      <span class="cm"># where the current running subarray starts</span>
+<span class="kw">for</span> idx, num <span class="kw">in</span> <span class="fn">enumerate</span>(nums[<span class="num">1</span>:], <span class="num">1</span>):
+    <span class="kw">if</span> cur_sum > <span class="num">0</span>:
+        cur_sum += num
+    <span class="kw">else</span>:
+        cur_sum = num
+        curr_start = idx     <span class="cm"># fresh subarray begins here</span>
+    <span class="kw">if</span> cur_sum > max_sum:
+        max_sum = cur_sum
+        a_start = curr_start
+        a_end = idx
+        </div>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #8 — Subarray tracking is premature for the problem</h5>
+        <p>LeetCode 53 asks for the <strong>sum</strong> only. Adding <code>a_start</code>, <code>a_end</code>, and <code>print()</code> to reconstruct the subarray is a feature the problem doesn't ask for. In an interview, this is neutral-to-positive <em>if you get it right</em>. But when tracking variables contain bugs (Issue #2, #7), the extra complexity becomes a liability — it introduces failure modes for something that wasn't required. Ship the simplest correct solution first, then extend.</p>
+      </div>
+
+      <!-- THE FIX -->
+      <h3 style="color:var(--green);margin-top:1.5rem">🟢 Fixed & Improved Solution</h3>
+
+      <div class="fix-card">
+        <h5>What changed and why:</h5>
+        <ul style="padding-left:1.5rem;color:var(--text-muted)">
+          <li><strong>Fixed the overwrite:</strong> <code>max_sum</code> is never decremented — always <code>max(max_sum, ...)</code></li>
+          <li><strong>Flipped the condition:</strong> test <code>cur_sum &gt; 0</code> (extend) first, <code>else</code> (fresh) second</li>
+          <li><strong>Removed <code>a_start</code>/<code>a_end</code>:</strong> the problem asks for the sum, not the subarray</li>
+          <li><strong>Renamed <code>n</code> → <code>num</code>:</strong> no shadowing, clear meaning</li>
+          <li><strong>Removed <code>print()</code>:</strong> clean production code</li>
+          <li><strong>Unified <code>max_sum</code> update:</strong> single <code>max(max_sum, cur_sum)</code> after each step — no duplicated logic across branches</li>
+        </ul>
+      </div>
+
+      <div class="code-block">
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">maxSubArray</span>(<span class="kw">self</span>, nums: List[<span class="kw">int</span>]) -> <span class="kw">int</span>:
+        max_sum = cur_sum = nums[<span class="num">0</span>]
+
+        <span class="kw">for</span> num <span class="kw">in</span> nums[<span class="num">1</span>:]:
+            <span class="cm"># Extend if beneficial, otherwise start fresh</span>
+            <span class="kw">if</span> cur_sum > <span class="num">0</span>:
+                cur_sum += num
+            <span class="kw">else</span>:
+                cur_sum = num
+
+            <span class="cm"># Single point of truth for the global max</span>
+            max_sum = <span class="fn">max</span>(max_sum, cur_sum)
+
+        <span class="kw">return</span> max_sum
+      </div>
+
+      <p style="color:var(--text-muted);margin-top:0.5rem">Or even shorter — the one-liner recurrence that's standard in interviews:</p>
+
+      <div class="code-block">
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">maxSubArray</span>(<span class="kw">self</span>, nums: List[<span class="kw">int</span>]) -> <span class="kw">int</span>:
+        max_sum = cur_sum = nums[<span class="num">0</span>]
+        <span class="kw">for</span> num <span class="kw">in</span> nums[<span class="num">1</span>:]:
+            cur_sum = <span class="fn">max</span>(num, cur_sum + num)
+            max_sum = <span class="fn">max</span>(max_sum, cur_sum)
+        <span class="kw">return</span> max_sum
+      </div>
+
+      <h3 style="color:var(--accent);margin-top:1.5rem">🎯 Key Takeaway</h3>
+      <div class="concept-box">
+        <p style="color:var(--text-muted)"><strong>You clearly understand Kadane's core idea — the extend-vs-fresh decision.</strong> The explicit if/else branching proves you've internalized the recurrence. The attempt to track subarray bounds shows ambition beyond the minimum requirement.</p>
+        <p style="color:var(--text-muted);margin-top:0.5rem"><strong>But Bug #1 is a classic DP mistake:</strong> updating the global optimum inside a conditional branch without a <code>max()</code> guard. This pattern — "I know I found a new candidate, so it must be better" — is exactly how DP solutions fail in interviews. The fix is mechanical: <strong>never let <code>max_sum</code> decrease</strong>. Every write to it must pass through <code>max()</code> or a comparison guard.</p>
+        <ul style="padding-left:1.5rem;color:var(--text-muted);margin-top:0.5rem">
+          <li><strong>Single source of truth for max:</strong> pull the <code>max_sum = max(max_sum, cur_sum)</code> out of the branches. One line, unconditional, after each step. Guarantees correctness.</li>
+          <li><strong>Test negative-interleaved arrays:</strong> <code>[2, -3, 1]</code>, <code>[5, -10, -1]</code>, <code>[-2, 1, -3, 4]</code>. These expose the "fresh start destroys best" bug.</li>
+          <li><strong>If you track auxiliary state, verify the invariant:</strong> <code>max_sum</code> must always equal the max of all subarrays ending at or before the current index. If tracking variables disagree, one of them is wrong.</li>
+          <li><strong>Canonical form matters in interviews:</strong> <code>cur_sum = max(num, cur_sum + num)</code> says in one line what your if/else says in six. Both are correct, but the one-liner signals fluency.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SUBMISSION 2 ===== -->
+  <div class="submission-entry" id="submission-2">
+    <div class="submission-header" onclick="toggleSubmission('submission-2')">
+      <div class="left">
+        <span class="chevron">▶</span>
+        <span class="title">Submission #2 — Ternary + comparison guard (second attempt)</span>
+        <span class="badge bug">1 bug</span>
+        <span class="badge warn">5 issues</span>
+        <span class="badge info">1 improvement</span>
+      </div>
+      <span style="color:var(--text-muted);font-size:0.8rem">Click to expand</span>
+    </div>
+    <div class="submission-body">
+
+      <div class="score-bar" style="margin-top:1.2rem">
+        <span style="font-weight:700;color:var(--text)">Progress from #1:</span>
+        <span class="score-pill med">Improved but regressed</span>
+        <span style="color:var(--text-muted);font-size:0.85rem">Fixed the critical logic bug, but silently broke subarray tracking entirely</span>
+      </div>
+
+      <p style="color:var(--text-muted);margin-top:0.5rem">
+        <strong>What you fixed:</strong> ✅ Bug #1 (max_sum overwrite) — killed. ✅ Unified extend/fresh into a single ternary. ✅ <code>max_sum</code> now only updates via a guard comparison.<br>
+        <strong>What regressed:</strong> ❌ <code>a_start</code> is never updated at all — it was at least set in the fresh branch of #1, now it's frozen at 0 forever.
+      </p>
+
+      <h4 style="color:var(--text-muted);margin-top:0.8rem">Your submitted code:</h4>
+      <div class="code-block">
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">maxSubArray</span>(<span class="kw">self</span>, nums: List[<span class="kw">int</span>]) -> <span class="kw">int</span>:
+
+        <span class="cm"># State</span>
+        a_start = <span class="num">0</span>
+        a_end = <span class="num">0</span>
+        max_sum = nums[<span class="num">0</span>]
+        cur_sum = nums[<span class="num">0</span>]
+
+        <span class="kw">for</span> idx <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, <span class="fn">len</span>(nums)):
+            n = nums[idx]
+            <span class="cm"># if cur_sum is negative - better to start a fresh array</span>
+            new_sum = n <span class="kw">if</span> cur_sum < <span class="num">0</span> <span class="kw">else</span> cur_sum + n   <span class="callout">✅ cleaner than #1's if/else</span>
+            <span class="kw">if</span> new_sum > max_sum:             <span class="callout">✅ guarded comparison — overwrite bug is gone</span>
+                a_end = idx
+                max_sum = new_sum                <span class="callout">← ISSUE: a_start never updated here or anywhere</span>
+
+            cur_sum = new_sum
+
+        <span class="fn">print</span>(<span class="str">f"Maximum subarray: {nums[a_start:a_end+1]}"</span>)
+        <span class="fn">print</span>(<span class="str">f"Max sum: {max_sum}"</span>)
+        <span class="kw">return</span> max_sum
+      </div>
+
+      <!-- BUG-BY-BUG -->
+      <h3 style="color:var(--red);margin-top:1.5rem">🔴 Blocking Bug</h3>
+
+      <div class="critique-card">
+        <h5>Bug #1 — <code>a_start</code> is dead code — never written after initialization <span class="badge bug">BLOCKING</span> <span class="badge fixed">regression from #1</span></h5>
+        <p>In submission #1, <code>a_start</code> was at least set inside the <code>if cur_sum &lt; 0</code> branch (even if it had the overwrite bug). In <strong>this</strong> submission, <code>a_start</code> is <strong>never updated at all</strong>. It stays frozen at <code>0</code> forever.</p>
+
+        <p style="margin-top:0.5rem"><strong>Why this is worse than #1:</strong> In #1, the tracking was <em>sometimes</em> right (when the overwrite bug didn't fire). Here, it's <em>always</em> wrong for any input where the best subarray doesn't start at index 0.</p>
+
+        <p style="margin-top:0.5rem"><strong>Trace through the main example:</strong> <code>[-2, 1, -3, 4, -1, 2, 1, -5, 4]</code></p>
+        <table style="border-collapse:collapse;font-size:0.82rem;margin:0.5rem 0;width:100%">
+          <tr style="background:var(--surface2)">
+            <th style="padding:0.3rem 0.5rem;text-align:left;color:var(--accent2)">idx</th>
+            <th style="padding:0.3rem 0.5rem;text-align:left;color:var(--accent2)">num</th>
+            <th style="padding:0.3rem 0.5rem;text-align:left;color:var(--accent2)">cur_sum (before)</th>
+            <th style="padding:0.3rem 0.5rem;text-align:left;color:var(--accent2)">new_sum</th>
+            <th style="padding:0.3rem 0.5rem;text-align:left;color:var(--accent2)">new best?</th>
+            <th style="padding:0.3rem 0.5rem;text-align:left;color:var(--accent2)">a_start (after)</th>
+            <th style="padding:0.3rem 0.5rem;text-align:left;color:var(--accent2)">a_end (after)</th>
+            <th style="padding:0.3rem 0.5rem;text-align:left;color:var(--accent2)">max_sum</th>
+            <th style="padding:0.3rem 0.5rem;text-align:left;color:var(--accent2)">printed subarray</th>
+          </tr>
+          <tr>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">0</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border);color:var(--accent)">-2</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">0</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">0</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border);color:var(--green);font-weight:700">-2</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">[-2]</td>
+          </tr>
+          <tr>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">1</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">1</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border);color:var(--red)">-2</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">1 (fresh)</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border);color:var(--green)">✓</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border);color:var(--red);font-weight:700">0</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">1</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border);color:var(--green);font-weight:700">1</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border);color:var(--red)">[-2, 1] ← WRONG</td>
+          </tr>
+          <tr>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">...</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">...</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">...</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">...</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">...</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border);color:var(--red);font-weight:700">0</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">6</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">...</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">...</td>
+          </tr>
+          <tr style="background:rgba(248,113,113,0.08)">
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">final</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">—</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border);color:var(--red);font-weight:700">0</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border)">6</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border);color:var(--green);font-weight:700">6</td>
+            <td style="padding:0.3rem 0.5rem;border-top:1px solid var(--border);color:var(--red);font-weight:700">[-2,1,-3,4,-1,2,1] sum=2 ← WRONG</td>
+          </tr>
+        </table>
+        <p style="margin-top:0.6rem">The <code>print</code> at the bottom reports the subarray <code>[-2, 1, -3, 4, -1, 2, 1]</code> (indices 0–6, sum = 2), but <code>max_sum = 6</code>. The correct subarray is <code>[4, -1, 2, 1]</code> (indices 3–6). The tracking variables <strong>disagree with the returned answer</strong>.</p>
+
+        <div class="fix-card">
+          <h5>Fix: Track <code>curr_start</code> separately from <code>best_start</code></h5>
+          <p>You need two concepts: where the <strong>current running</strong> subarray begins (updates on every fresh start), and where the <strong>best</strong> subarray begins (only updates when a new max is found):</p>
+          <div class="code-block" style="font-size:0.8rem">
+curr_start = <span class="num">0</span>  <span class="cm"># beginning of the current running subarray</span>
+<span class="kw">for</span> idx <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, <span class="fn">len</span>(nums)):
+    num = nums[idx]
+    new_sum = num <span class="kw">if</span> cur_sum < <span class="num">0</span> <span class="kw">else</span> cur_sum + num
+
+    <span class="kw">if</span> cur_sum < <span class="num">0</span>:
+        curr_start = idx      <span class="cm"># fresh subarray starts here</span>
+
+    <span class="kw">if</span> new_sum > max_sum:
+        a_start = curr_start  <span class="cm"># snapshot the start of the best so far</span>
+        a_end = idx
+        max_sum = new_sum
+
+    cur_sum = new_sum
+          </div>
+        </div>
+      </div>
+
+      <!-- DESIGN ISSUES -->
+      <h3 style="color:var(--yellow);margin-top:1.5rem">🟡 Design / Code Quality Issues</h3>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #2 — <code>a_start</code> is dead code with a misleading name</h5>
+        <p>A variable named <code>a_start</code> that is initialized, never modified, and always reads as <code>0</code> is a red flag. It signals either: (a) the tracking logic was removed during refactoring, or (b) the variable was added with intent that was never implemented. Either way, dead code in a 15-line function is hard to justify.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #3 — <code>print</code> output is now actively misleading</h5>
+        <p>In submission #1, the prints were sometimes wrong. In submission #2, they're <strong>always</strong> wrong (unless the best subarray happens to start at index 0). Debug output that contradicts the returned answer is worse than no output — it would send anyone debugging this code down the wrong path. Simply remove the prints.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #4 — Same <code>n</code> shadowing from #1</h5>
+        <p>Unchanged. <code>n = nums[idx]</code> still shadows the array-length convention. Use <code>num</code> or <code>x</code>.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #5 — Same inverted condition from #1</h5>
+        <p><code>n if cur_sum &lt; 0 else cur_sum + n</code> — the ternary tests the negative case first. While compact, <code>cur_sum + num if cur_sum &gt; 0 else num</code> reads left-to-right as "extend if beneficial, else fresh" and matches how a human thinks about the problem.</p>
+      </div>
+
+      <div class="critique-card" style="border-left-color:var(--yellow)">
+        <h5 style="color:var(--yellow)">Issue #6 — The comment is now a lie</h5>
+        <p><code># if cur_sum is negative - better to start a fresh array</code> describes behavior that happens implicitly inside the ternary, but the ternary also handles the non-negative case with an <code>else</code>. The comment only describes half the logic. Either remove it or say what the line actually does: <code># extend if beneficial, otherwise restart</code>.</p>
+      </div>
+
+      <!-- WHAT IMPROVED -->
+      <h3 style="color:var(--accent);margin-top:1.5rem">🔵 What Improved from #1</h3>
+
+      <div class="fix-card" style="border-left-color:var(--accent)">
+        <h5 style="color:var(--accent)">Improvement — The ternary is genuinely better</h5>
+        <p>The collapse of 6 lines of if/else into one ternary is the right instinct. Compare:</p>
+        <div class="code-block" style="font-size:0.82rem">
+<span class="cm"># Submission #1 — 6 lines, duplicated max_sum update</span>
+<span class="kw">if</span> cur_sum < <span class="num">0</span>:
+    a_start = idx
+    a_end = idx
+    max_sum = n               <span class="cm">← bug: unconditional overwrite</span>
+    cur_sum = n
+<span class="kw">else</span>:
+    new_sum = cur_sum + n
+    <span class="kw">if</span> new_sum > max_sum:
+        a_end = idx
+        max_sum = new_sum
+    cur_sum = new_sum
+
+<span class="cm"># Submission #2 — 4 lines, single max_sum guard</span>
+new_sum = n <span class="kw">if</span> cur_sum < <span class="num">0</span> <span class="kw">else</span> cur_sum + n
+<span class="kw">if</span> new_sum > max_sum:
+    a_end = idx
+    max_sum = new_sum
+cur_sum = new_sum
+        </div>
+        <p style="margin-top:0.5rem">This is cleaner, less error-prone, and closer to the canonical form. The direction is right — now just finish the job.</p>
+      </div>
+
+      <!-- THE FIX -->
+      <h3 style="color:var(--green);margin-top:1.5rem">🟢 Fixed & Improved Solution</h3>
+
+      <div class="fix-card">
+        <h5>Minimal fix — preserve your ternary style, fix tracking, drop prints:</h5>
+      </div>
+
+      <div class="code-block">
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">maxSubArray</span>(<span class="kw">self</span>, nums: List[<span class="kw">int</span>]) -> <span class="kw">int</span>:
+        max_sum = cur_sum = nums[<span class="num">0</span>]
+
+        <span class="kw">for</span> num <span class="kw">in</span> nums[<span class="num">1</span>:]:
+            <span class="cm"># Extend if beneficial; otherwise start fresh</span>
+            cur_sum = cur_sum + num <span class="kw">if</span> cur_sum > <span class="num">0</span> <span class="kw">else</span> num
+            max_sum = <span class="fn">max</span>(max_sum, cur_sum)
+
+        <span class="kw">return</span> max_sum
+      </div>
+
+      <p style="color:var(--text-muted);margin-top:0.5rem">If you really want subarray tracking (not required by the problem, but good practice):</p>
+
+      <div class="code-block">
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">maxSubArray</span>(<span class="kw">self</span>, nums: List[<span class="kw">int</span>]) -> <span class="kw">int</span>:
+        max_sum = cur_sum = nums[<span class="num">0</span>]
+        best_start = best_end = curr_start = <span class="num">0</span>
+
+        <span class="kw">for</span> idx, num <span class="kw">in</span> <span class="fn">enumerate</span>(nums[<span class="num">1</span>:], <span class="num">1</span>):
+            <span class="kw">if</span> cur_sum > <span class="num">0</span>:
+                cur_sum += num
+            <span class="kw">else</span>:
+                cur_sum = num
+                curr_start = idx        <span class="cm"># fresh subarray starts here</span>
+
+            <span class="kw">if</span> cur_sum > max_sum:
+                max_sum = cur_sum
+                best_start = curr_start  <span class="cm"># snapshot: this is the best we've seen</span>
+                best_end = idx
+
+        <span class="kw">return</span> max_sum  <span class="cm"># or return nums[best_start:best_end+1] if asked</span>
+      </div>
+
+      <h3 style="color:var(--accent);margin-top:1.5rem">🎯 Key Takeaway</h3>
+      <div class="concept-box">
+        <p style="color:var(--text-muted)"><strong>You fixed the big bug and made the code more concise — that's real progress.</strong> The ternary is the right refactoring direction. The <code>max_sum</code> guard is correct now.</p>
+        <p style="color:var(--text-muted);margin-top:0.5rem"><strong>But you dropped the <code>a_start</code> update entirely.</strong> When you refactor an if/else into a ternary, check whether <em>every side effect</em> from the original branches was preserved. The fresh branch in #1 set <code>a_start</code> — when that branch disappeared into the ternary, the assignment disappeared too.</p>
+        <ul style="padding-left:1.5rem;color:var(--text-muted);margin-top:0.5rem">
+          <li><strong>Refactoring rule:</strong> when collapsing branches, list every mutation that happened in each branch and verify each one is still handled.</li>
+          <li><strong>Two-start tracking:</strong> <code>curr_start</code> (where the current subarray begins) vs. <code>best_start</code> (where the best subarray begins). These update at different times — confusing them is the root of this bug.</li>
+          <li><strong>Drop dead code or fix it:</strong> <code>a_start</code> is now dead. Either remove it (if you're only returning the sum) or wire it up correctly (if you're tracking). A dead variable is worse than no variable.</li>
+          <li><strong>You're one line away:</strong> <code>cur_sum = cur_sum + num if cur_sum > 0 else num; max_sum = max(max_sum, cur_sum)</code>. That's the whole algorithm in two lines.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</div>
+
+<script>
+// ===================== STATE =====================
+let currentArr = [-2,1,-3,4,-1,2,1,-5,4];
+let n = 0;
+let dpValues = [];
+let steps = [];            // { i, dpVal, globalMax, extendVal, freshVal, choseExtend, currentBestStart, currentBestEnd, globalBestStart, globalBestEnd }
+let stepIndex = 0;
+let autoTimer = null;
+let speedMs = 800;
+let currentStart = [];     // start index of subarray ending at i for dp[i]
+let globalStart = 0;
+let globalEnd = 0;
+
+function buildSteps(arr) {
+  const n = arr.length;
+  const dp = new Array(n);
+  const steps = [];
+  const cStart = new Array(n);  // where does subarray for dp[i] start?
+
+  dp[0] = arr[0];
+  cStart[0] = 0;
+  let gMax = dp[0], gStart = 0, gEnd = 0;
+
+  steps.push({
+    i: 0, dpVal: dp[0], globalMax: gMax,
+    extendVal: null, freshVal: arr[0], choseExtend: null,
+    cBestStart: 0, cBestEnd: 0,
+    gBestStart: 0, gBestEnd: 0,
+    isBase: true
+  });
+
+  for (let i = 1; i < n; i++) {
+    const freshVal = arr[i];
+    const extendVal = dp[i-1] + arr[i];
+    const choseExtend = extendVal > freshVal;
+    dp[i] = Math.max(freshVal, extendVal);
+
+    if (choseExtend) {
+      cStart[i] = cStart[i-1];
+    } else {
+      cStart[i] = i;
+    }
+
+    if (dp[i] > gMax) {
+      gMax = dp[i];
+      gStart = cStart[i];
+      gEnd = i;
+    }
+
+    steps.push({
+      i, dpVal: dp[i], globalMax: gMax,
+      extendVal, freshVal, choseExtend,
+      cBestStart: cStart[i], cBestEnd: i,
+      gBestStart: gStart, gBestEnd: gEnd,
+      isBase: false
+    });
+  }
+
+  // Final summary step
+  steps.push({
+    i: n, dpVal: null, globalMax: gMax,
+    extendVal: null, freshVal: null, choseExtend: null,
+    cBestStart: null, cBestEnd: null,
+    gBestStart: gStart, gBestEnd: gEnd,
+    isDone: true
+  });
+
+  return { dp, steps };
+}
+
+// ===================== RENDER =====================
+function renderAll() {
+  renderArray();
+  renderDpTable();
+  renderDecision();
+  renderStepInfo();
+  renderProgress();
+  updateButtons();
+}
+
+function renderArray() {
+  const container = document.getElementById('array-display');
+  const step = (stepIndex > 0 && stepIndex < steps.length) ? steps[stepIndex] : null;
+  const doneStep = steps[steps.length - 1];
+  const isDone = step && step.isDone;
+
+  let html = '';
+  for (let k = 0; k < n; k++) {
+    let cls = 'arr-val-box';
+
+    if (isDone) {
+      if (k >= doneStep.gBestStart && k <= doneStep.gBestEnd) {
+        cls += ' in-best-subarray';
+      }
+    } else if (step && !step.isBase) {
+      if (k === step.i) {
+        cls += ' curr-end';
+      } else if (k >= step.cBestStart && k < step.i) {
+        cls += ' in-current-subarray';
+      }
+      if (k >= step.gBestStart && k <= step.gBestEnd) {
+        cls += ' in-best-subarray';
+      }
+    } else if (step && step.isBase) {
+      if (k === 0) cls += ' curr-end';
+    }
+
+    html += `<div class="arr-col">
+      <span class="arr-idx">${k}</span>
+      <div class="${cls}">${currentArr[k]}</div>
+      <span class="arr-dp-label">dp</span>
+      <span class="arr-dp">${k < dpValues.length ? dpValues[k] : '—'}</span>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+function renderDpTable() {
+  const table = document.getElementById('dp-table');
+  const step = (stepIndex > 0 && stepIndex < steps.length) ? steps[stepIndex] : null;
+  const isDone = step && step.isDone;
+
+  let html = '<thead><tr><th>index i</th>';
+  for (let k = 0; k < n; k++) html += `<th>${k}</th>`;
+  html += '</tr></thead><tbody>';
+
+  // nums row
+  html += '<tr><th>nums[i]</th>';
+  for (let k = 0; k < n; k++) {
+    let cls = '';
+    html += `<td class="${cls}">${currentArr[k]}</td>`;
+  }
+  html += '</tr>';
+
+  // dp row
+  html += '<tr><th>dp[i]</th>';
+  for (let k = 0; k < n; k++) {
+    let cls = '';
+    if (isDone && k >= steps[steps.length-1].gBestStart && k <= steps[steps.length-1].gBestEnd) {
+      cls = 'best-cell';
+    } else if (step && !step.isDone && k === step.i) {
+      cls = 'highlight-cell';
+    }
+    html += `<td class="${cls}">${k < dpValues.length ? dpValues[k] : '—'}</td>`;
+  }
+  html += '</tr>';
+
+  // decision row
+  html += '<tr><th>decision</th>';
+  for (let k = 0; k < n; k++) {
+    if (k === 0) {
+      html += '<td style="color:var(--green)">base</td>';
+    } else if (k < steps.length && k > 0) {
+      const s = steps[k];
+      const label = s.choseExtend ? 'extend' : 'fresh';
+      const color = s.choseExtend ? 'var(--pink)' : 'var(--green)';
+      html += `<td style="color:${color};font-weight:600">${label}</td>`;
+    } else {
+      html += '<td>—</td>';
+    }
+  }
+  html += '</tr>';
+
+  // global max row
+  html += '<tr><th>global max</th>';
+  const finalMax = steps[steps.length - 1].globalMax;
+  for (let k = 0; k < n; k++) {
+    let cls = '';
+    if (dpValues[k] === finalMax) cls = 'best-cell';
+    const gVal = k === 0 ? dpValues[0] : (k < steps.length ? steps[k].globalMax : '—');
+    html += `<td class="${cls}">${gVal}</td>`;
+  }
+  html += '</tr>';
+
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function renderDecision() {
+  const viz = document.getElementById('decision-viz');
+  const step = (stepIndex > 0 && stepIndex < steps.length) ? steps[stepIndex] : null;
+  if (!step || step.isBase || step.isDone) {
+    viz.style.display = 'none';
+    return;
+  }
+  viz.style.display = 'flex';
+
+  document.getElementById('val-extend').textContent = step.extendVal;
+  document.getElementById('val-fresh').textContent = step.freshVal;
+  document.getElementById('val-dp').textContent = step.dpVal;
+
+  const branchExt = document.getElementById('branch-extend');
+  const branchFresh = document.getElementById('branch-fresh');
+  const branchResult = document.getElementById('branch-result');
+
+  branchExt.className = 'decision-branch';
+  branchFresh.className = 'decision-branch';
+
+  if (step.choseExtend) {
+    branchExt.classList.add('chosen');
+    branchFresh.classList.add('rejected');
+  } else {
+    branchFresh.classList.add('chosen');
+    branchExt.classList.add('rejected');
+  }
+}
+
+function renderStepInfo() {
+  const numEl = document.getElementById('step-num');
+  const descEl = document.getElementById('step-desc');
+
+  if (stepIndex === 0) {
+    numEl.textContent = '—';
+    descEl.textContent = 'Click "Step Forward" to begin building the DP table';
+    return;
+  }
+
+  const step = steps[stepIndex];
+  numEl.textContent = stepIndex;
+
+  if (step.isBase) {
+    descEl.innerHTML = `<strong>Base case:</strong> dp[0] = nums[0] = <span style="color:var(--accent)">${currentArr[0]}</span>. The only subarray ending at index 0 is [${currentArr[0]}]. Global max = <span style="color:var(--green)">${dpValues[0]}</span>.`;
+  } else if (step.isDone) {
+    const bestArr = currentArr.slice(step.gBestStart, step.gBestEnd + 1);
+    descEl.innerHTML = `✅ <strong>Done!</strong> Maximum subarray sum: <span style="color:var(--green);font-weight:700">${step.globalMax}</span> from <span style="color:var(--accent2)">[${bestArr.join(', ')}]</span> (indices ${step.gBestStart}–${step.gBestEnd})`;
+  } else {
+    const action = step.choseExtend ? '<span style="color:var(--pink)">EXTEND</span>' : '<span style="color:var(--green)">START FRESH</span>';
+    const prev = step.choseExtend ? `dp[${step.i-1}] = ${dpValues[step.i-1]} (positive → extend)` : `dp[${step.i-1}] = ${dpValues[step.i-1]} (≤ 0 → or fresh is better)`;
+    const sub = currentArr.slice(step.cBestStart, step.cBestEnd + 1);
+    descEl.innerHTML = `<strong>dp[${step.i}]:</strong> ${action} → dp[${step.i}] = <span style="color:var(--accent);font-weight:700">${step.dpVal}</span>. Subarray: [${sub.join(', ')}]. ${prev}. Global max now: <span style="color:var(--green)">${step.globalMax}</span>.`;
+  }
+}
+
+function renderProgress() {
+  const pct = steps.length > 2 ? Math.min(100, ((stepIndex) / (steps.length - 1)) * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function updateButtons() {
+  const btnStep = document.getElementById('btn-step');
+  if (stepIndex >= steps.length - 1) {
+    btnStep.textContent = '✓ Complete';
+    btnStep.disabled = true;
+  } else {
+    btnStep.textContent = '▶ Step Forward';
+    btnStep.disabled = false;
+  }
+}
+
+function resetState(arr) {
+  currentArr = arr;
+  n = arr.length;
+  stepIndex = 0;
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  const { dp: newDp, steps: newSteps } = buildSteps(arr);
+  dpValues = newDp;
+  steps = newSteps;
+  renderAll();
+  document.getElementById('result-box').style.display = 'none';
+}
+
+function stepForward() {
+  if (stepIndex < steps.length - 1) {
+    stepIndex++;
+    renderAll();
+    if (steps[stepIndex] && steps[stepIndex].isDone) {
+      const s = steps[stepIndex];
+      const bestArr = currentArr.slice(s.gBestStart, s.gBestEnd + 1);
+      document.getElementById('result-box').style.display = 'block';
+      document.getElementById('max-result').textContent = s.globalMax;
+      document.getElementById('best-subarray').textContent = `[${bestArr.join(', ')}]`;
+    }
+  }
+}
+
+function jumpToEnd() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  stepIndex = steps.length - 1;
+  renderAll();
+  const s = steps[stepIndex];
+  if (s && s.isDone) {
+    const bestArr = currentArr.slice(s.gBestStart, s.gBestEnd + 1);
+    document.getElementById('result-box').style.display = 'block';
+    document.getElementById('max-result').textContent = s.globalMax;
+    document.getElementById('best-subarray').textContent = `[${bestArr.join(', ')}]`;
+  }
+}
+
+function toggleAuto() {
+  if (autoTimer) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+    document.getElementById('btn-auto').textContent = '⟳ Auto-Play';
+    document.getElementById('btn-auto').classList.remove('active');
+    return;
+  }
+  document.getElementById('btn-auto').textContent = '⏸ Pause';
+  document.getElementById('btn-auto').classList.add('active');
+  autoPlay();
+}
+
+function autoPlay() {
+  if (!autoTimer) return;
+  if (stepIndex >= steps.length - 1) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+    document.getElementById('btn-auto').textContent = '⟳ Auto-Play';
+    document.getElementById('btn-auto').classList.remove('active');
+    return;
+  }
+  stepForward();
+  autoTimer = setTimeout(autoPlay, speedMs);
+}
+
+// ===================== EVENT LISTENERS =====================
+document.getElementById('btn-step').addEventListener('click', stepForward);
+document.getElementById('btn-reset').addEventListener('click', () => resetState(currentArr));
+document.getElementById('btn-auto').addEventListener('click', toggleAuto);
+document.getElementById('btn-jump').addEventListener('click', jumpToEnd);
+
+document.getElementById('speed-slider').addEventListener('input', (e) => {
+  speedMs = Math.round(parseFloat(e.target.value) * 1000);
+  document.getElementById('speed-label').textContent = (speedMs / 1000).toFixed(1) + 's';
+});
+
+document.getElementById('example-btns').addEventListener('click', (e) => {
+  if (e.target.tagName === 'BUTTON') {
+    document.querySelectorAll('#example-btns button').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    resetState(e.target.dataset.arr.split(',').map(Number));
+  }
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ') {
+    e.preventDefault();
+    stepForward();
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    if (stepIndex > 0) { stepIndex--; renderAll(); }
+  } else if (e.key === 'a') {
+    e.preventDefault();
+    toggleAuto();
+  } else if (e.key === 'r') {
+    e.preventDefault();
+    resetState(currentArr);
+  } else if (e.key === 'j') {
+    e.preventDefault();
+    jumpToEnd();
+  }
+});
+
+// Static demo render
+(function renderStatic() {
+  const demo = [-2,1,-3,4,-1,2,1,-5,4];
+  const container = document.getElementById('static-demo');
+  let html = '';
+  for (let k = 0; k < demo.length; k++) {
+    html += `<div class="arr-col">
+      <span class="arr-idx">${k}</span>
+      <div class="arr-val-box">${demo[k]}</div>
+    </div>`;
+  }
+  container.innerHTML = html;
+})();
+
+// Initial render
+resetState([-2,1,-3,4,-1,2,1,-5,4]);
+
+// ===================== SUBMISSION TOGGLE =====================
+function toggleSubmission(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+</script>
+
+</body>
+</html>
